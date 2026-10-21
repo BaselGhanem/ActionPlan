@@ -18,3 +18,5 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Monetary logic uses integer cents. Use template literals for JavaScript logic strings.
 
 - Rules validation supports up to 8 clients and 8 participating teams per activity; keep limits visible and consistent in UI and rules.
+
+- Customer roster imports use team-bound XLSX templates exclusively; Admin can download a blank template or edit the current roster using the same template. Validate file signature, team ID, headers, mandatory fields, duplicate codes, and numeric codes before replacing the full team list.

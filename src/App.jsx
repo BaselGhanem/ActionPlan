@@ -44,13 +44,8 @@ import {
   charges,
   cents,
 } from "./data/domain";
-import {
-  columns,
-  autoMap,
-  readFile,
-  delimited,
-  downloadWorkbook,
-} from "./files";
+import { columns, downloadWorkbook } from "./files";
+import { downloadRosterTemplate, readRosterTemplate } from "./roster-template";
 const money = (n) =>
   new Intl.NumberFormat(`en-US`, {
     minimumFractionDigits: 2,
@@ -1885,9 +1880,9 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo }) {
     }),
     [userEdit, setUserEdit] = useState(null),
     [importTeam, setImportTeam] = useState(``),
-    [raw, setRaw] = useState([]),
-    [mapping, setMapping] = useState({}),
-    [paste, setPaste] = useState(``),
+    [templateRows, setTemplateRows] = useState([]),
+    [templateIssues, setTemplateIssues] = useState([]),
+    [templateTeam, setTemplateTeam] = useState(``),
     [progress, setProgress] = useState(``),
     [ack, setAck] = useState(false),
     [uploadName, setUploadName] = useState(``);
@@ -1902,34 +1897,16 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo }) {
       setBusy(false);
     }
   };
-  const loadRows = (rows, name) => {
-    if (rows.length < 2)
-      throw new Error(`الملف يجب أن يحتوي عناوين وأسماء عملاء`);
-    setRaw(rows);
-    setMapping(autoMap(rows[0]));
-    setUploadName(name);
-    setAck(false);
-  };
-  const mapped = raw
-    .slice(1)
-    .filter((r) => r.some((v) => String(v ?? ``).trim()))
-    .map((r) =>
-      Object.fromEntries(
-        columns.map((c) => [
-          c.key,
-          mapping[c.key] >= 0 ? String(r[mapping[c.key]] ?? ``).trim() : ``,
-        ]),
-      ),
-    );
-  const duplicate = mapped.length - new Set(mapped.map((r) => r.code)).size,
-    invalid = mapped.filter((r) => !r.code || !r.name || r.code.includes(`/`));
+  const selectedImportTeam = data.teams.find((t) => t.id === importTeam);
+  const currentRoster = data.rosters.find((r) => r.teamId === importTeam)?.rows || [];
+  const mapped = templateTeam === importTeam ? templateRows.map(({ rowNumber, ...fields }) => fields) : [];
   async function upload() {
     if (isDemo) {
       notify(`رفع البيانات متاح بعد تسجيل الدخول الفعلي فقط`);
       return;
     }
-    if (!importTeam || !mapped.length || invalid.length || duplicate || !ack)
-      throw new Error(`اختر الفريق وعالج الأخطاء وأكد استبدال القائمة`);
+    if (!importTeam || templateTeam !== importTeam || !mapped.length || templateIssues.length || !ack)
+      throw new Error(`اختر الفريق وارفع القالب الصحيح وعالج الأخطاء ثم أكد الاستبدال`);
     setProgress(`تجهيز الرفع…`);
     const { id } = await request(`startImport`, { teamId: importTeam });
     for (let i = 0; i < mapped.length; i += 150) {
@@ -1941,8 +1918,11 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo }) {
     setProgress(`اعتماد القائمة…`);
     await request(`finishImport`, { id });
     await reload();
-    setRaw([]);
-    setPaste(``);
+    setTemplateRows([]);
+    setTemplateIssues([]);
+    setTemplateTeam(``);
+    setUploadName(``);
+    setAck(false);
     setProgress(``);
     notify(
       `تم استبدال قائمة الفريق بنجاح مع الاحتفاظ بالأنشطة السابقة`,
@@ -2265,157 +2245,146 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo }) {
         </div>
       )}
       {tab === `upload` && admin && (
-        <section className="surface">
+        <section className="surface roster-upload">
           <div className="section-heading">
             <div>
-              <h3>استبدال قائمة عملاء الفريق</h3>
-              <p>
-                تبقى الأنشطة السابقة محفوظة • بيانات العميل المشتركة تعتمد آخر
-                رفع
-              </p>
+              <h3>قوالب عملاء الفرق</h3>
+              <p>كل فريق له قالب Excel مستقل • معاينة وتدقيق قبل استبدال القائمة</p>
             </div>
           </div>
-          <Field label="الفريق المستهدف">
-            <select
-              value={importTeam}
-              onChange={(e) => {
-                setImportTeam(e.target.value);
-                setAck(false);
-              }}
-            >
-              <option value="">اختر الفريق</option>
-              {data.teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <div className="upload-grid">
-            <label className="upload-zone">
-              <UploadSimple size={34} />
-              <b>اختيار ملف من الجهاز</b>
-              <span>Excel XLSX أو CSV — العناوين في الصف الأول</span>
-              <input
-                type="file"
-                accept=".xlsx,.csv"
-                disabled={busy}
-                onChange={(e) => {
-                  const f = e.target.files[0];
-                  if (f) run(async () => loadRows(await readFile(f), f.name));
-                  e.target.value = ``;
-                }}
-              />
-            </label>
-            <div>
-              <Field label="أو الصق جدولا من Excel مع صف العناوين">
-                <textarea
-                  rows={4}
-                  value={paste}
-                  onChange={(e) => setPaste(e.target.value)}
-                  placeholder="الصق الجدول هنا"
-                />
-              </Field>
-              <button
-                disabled={!paste || busy}
-                onClick={() =>
-                  run(async () => loadRows(delimited(paste, `\t`), `جدول ملصق`))
-                }
-              >
-                قراءة الجدول
-              </button>
-            </div>
-          </div>
-          {raw.length > 0 && (
-            <>
-              <h3>ربط الأعمدة — {uploadName}</h3>
-              <div className="mapping-grid">
-                {columns.map((c) => (
-                  <Field
-                    key={c.key}
-                    label={`${c.label}${[`code`, `name`].includes(c.key) ? ` *` : ``}`}
+          <div className="roster-steps">
+            <div className="roster-step">
+              <span className="roster-step-number">1</span>
+              <div>
+                <h4>اختر الفريق</h4>
+                <p>حدد الفريق الذي ستقوم باستبدال قائمة عملائه</p>
+                <Field label="الفريق المستهدف">
+                  <select
+                    disabled={busy}
+                    value={importTeam}
+                    onChange={(e) => {
+                      setImportTeam(e.target.value);
+                      setTemplateRows([]);
+                      setTemplateIssues([]);
+                      setTemplateTeam(``);
+                      setUploadName(``);
+                      setAck(false);
+                    }}
                   >
-                    <select
-                      value={mapping[c.key] ?? -1}
-                      onChange={(e) => {
-                        setMapping((m) => ({
-                          ...m,
-                          [c.key]: Number(e.target.value),
-                        }));
-                        setAck(false);
-                      }}
-                    >
-                      <option value={-1}>غير موجود</option>
-                      {raw[0].map((v, i) => (
-                        <option key={i} value={i}>
-                          {v || `عمود ${i + 1}`}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                ))}
+                    <option value="">اختر الفريق</option>
+                    {data.teams.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </Field>
               </div>
+            </div>
+            <div className="roster-step">
+              <span className="roster-step-number">2</span>
+              <div>
+                <h4>نزّل قالب الفريق وعبئ العملاء</h4>
+                <p>ستة أعمدة ثابتة؛ كود العميل واسمه إلزاميان، والكود منسق كنص</p>
+                <div className="roster-actions">
+                  <button
+                    type="button"
+                    disabled={!selectedImportTeam || busy}
+                    onClick={() => run(() => downloadRosterTemplate(selectedImportTeam))}
+                  >
+                    <Download size={19} /> تنزيل قالب فارغ
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!selectedImportTeam || !currentRoster.length || busy}
+                    onClick={() => run(() => downloadRosterTemplate(selectedImportTeam, currentRoster))}
+                  >
+                    <FileXls size={19} /> تنزيل القائمة الحالية بالقالب ({currentRoster.length})
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="roster-step">
+              <span className="roster-step-number">3</span>
+              <div>
+                <h4>ارفع القالب المعبأ</h4>
+                <p>يتم قبول قالب XLSX الخاص بالفريق المختار فقط. لا يتم تغيير بيانات Firestore قبل التأكيد</p>
+                <label className={`upload-zone roster-template-zone ${!importTeam || busy ? `is-disabled` : ``}`}>
+                  <UploadSimple size={31} />
+                  <b>{uploadName || `اختر ملف القالب المعبأ`}</b>
+                  <span>صيغة XLSX فقط • تحقق من بيانات العملاء قبل الاعتماد</span>
+                  <input
+                    type="file"
+                    accept=".xlsx"
+                    disabled={!importTeam || busy}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) run(async () => {
+                        setTemplateRows([]);
+                        setTemplateIssues([]);
+                        setUploadName(``);
+                        setAck(false);
+                        const result = await readRosterTemplate(file, importTeam);
+                        setTemplateRows(result.rows);
+                        setTemplateIssues(result.issues);
+                        setTemplateTeam(importTeam);
+                        setUploadName(file.name);
+                        if (result.issues.length)
+                          notify(`يوجد أخطاء في القالب. صحح الصفوف المحددة ثم أعد رفع الملف`);
+                      });
+                      e.target.value = ``;
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+          {templateTeam === importTeam && mapped.length > 0 && (
+            <div className="roster-preview">
+              <h3>معاينة العملاء — {uploadName}</h3>
               <div className="import-summary">
                 <span>{mapped.length} عميل</span>
-                <span className={invalid.length ? `warning-text` : ``}>
-                  {invalid.length} صف غير صالح
-                </span>
-                <span className={duplicate ? `warning-text` : ``}>
-                  {duplicate} كود مكرر
+                <span className={templateIssues.length ? `warning-text` : ``}>
+                  {templateIssues.length ? `توجد ${templateIssues.length} ملاحظات يجب تصحيحها` : `البيانات اجتازت التحقق`}
                 </span>
               </div>
+              {!!templateIssues.length && (
+                <div className="roster-errors" role="alert">
+                  <strong>أخطاء القالب:</strong>
+                  <ul>
+                    {templateIssues.slice(0, 12).map((issue, i) => <li key={i}>{issue}</li>)}
+                  </ul>
+                  {templateIssues.length > 12 && <small>و${templateIssues.length - 12} أخطاء أخرى</small>}
+                </div>
+              )}
               <div className="table-wrap">
                 <table>
-                  <thead>
-                    <tr>
-                      {columns.map((c) => (
-                        <th key={c.key}>{c.label}</th>
-                      ))}
-                    </tr>
-                  </thead>
+                  <thead><tr>{columns.map((c) => <th key={c.key}>{c.label}</th>)}</tr></thead>
                   <tbody>
-                    {mapped.slice(0, 8).map((r, i) => (
+                    {mapped.slice(0, 8).map((row, i) => (
                       <tr key={i}>
-                        {columns.map((c) => (
-                          <td key={c.key}>{r[c.key] || `—`}</td>
-                        ))}
+                        {columns.map((c) => <td key={c.key}>{row[c.key] || `—`}</td>)}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="hint">
-                معاينة أول 8 صفوف • الكود والاسم إلزاميان • احفظ أكواد العملاء
-                كنص في Excel للحفاظ على الأصفار الأولى
-              </p>
+              <p className="hint">معاينة أول 8 عملاء • الملف يستبدل قائمة هذا الفريق كاملة ويحافظ على سجل الأنشطة السابقة</p>
               <label className="check-line import-confirm">
                 <Checkbox
                   type="checkbox"
                   checked={ack}
                   onChange={(e) => setAck(e.target.checked)}
                 />
-                أؤكد استبدال قائمة هذا الفريق، وتعطيل ارتباط العملاء غير
-                الموجودين فيها للأنشطة الجديدة
+                أؤكد استبدال جميع عملاء الفريق بهذه القائمة، وإيقاف ربط العملاء المحذوفين للأنشطة الجديدة
               </label>
               <button
                 className="primary"
-                disabled={
-                  busy ||
-                  !ack ||
-                  !importTeam ||
-                  invalid.length > 0 ||
-                  duplicate > 0 ||
-                  mapping.code < 0 ||
-                  mapping.name < 0
-                }
+                disabled={busy || !ack || !mapped.length || templateIssues.length > 0 || templateTeam !== importTeam}
                 onClick={() => run(upload)}
               >
                 <UploadSimple size={20} />
-                {busy
-                  ? progress || `جار الرفع…`
-                  : `اعتماد ورفع ${mapped.length} عميل`}
+                {busy ? progress || `جار الرفع…` : `اعتماد ورفع ${mapped.length} عميل`}
               </button>
-            </>
+            </div>
           )}
         </section>
       )}

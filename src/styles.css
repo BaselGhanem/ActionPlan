@@ -1742,3 +1742,37 @@ tfoot td {
 .check-line .checkbox-wrap {
   flex-shrink: 0;
 }
+
+/* Team-specific customer Excel template workflow */
+.roster-upload .roster-steps { display: grid; gap: 16px; margin-top: 22px; }
+.roster-upload .roster-step {
+  display: grid; grid-template-columns: 36px minmax(0,1fr);
+  gap: 14px; padding: 21px 22px; border: 1px solid #dce7f2;
+  border-radius: 14px; background: #fafcfe; align-items: start;
+}
+.roster-upload .roster-step-number {
+  width: 36px; height: 36px; display: flex; justify-content: center;
+  align-items: center; border-radius: 11px; background: #0b457f;
+  color: #fff; font-size: 15px; font-weight: 800;
+}
+.roster-upload .roster-step h4 { margin: 0 0 3px; font-size: 15px; color: #17324d; }
+.roster-upload .roster-step p { margin: 0 0 13px; font-size: 12px; color: #62778b; }
+.roster-upload .roster-step .field { max-width: 480px; margin-bottom: 0; }
+.roster-upload .roster-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.roster-upload .roster-actions button { display: flex; gap: 9px; align-items: center; }
+.roster-upload .roster-template-zone { min-height: 135px; margin-top: 8px; }
+.roster-upload .roster-template-zone.is-disabled {
+  opacity: .55; cursor: not-allowed; pointer-events: none;
+}
+.roster-upload .roster-preview { padding-top: 21px; border-top: 1px solid #dce7f2; margin-top: 22px; }
+.roster-upload .roster-errors {
+  margin: 15px 0; padding: 14px 18px; border-radius: 11px;
+  background: #fff5eb; border: 1px solid #f1c99f; color: #854217; font-size: 12px;
+}
+.roster-upload .roster-errors ul { margin: 7px 16px 0 0; padding: 0; }
+.roster-upload .roster-errors li { margin: 4px 0; }
+@media(max-width: 640px) {
+  .roster-upload .roster-step { padding: 15px 13px; grid-template-columns: 30px minmax(0,1fr); gap: 11px; }
+  .roster-upload .roster-step-number { width: 30px; height: 30px; }
+  .roster-upload .roster-actions button { width: 100%; justify-content: center; }
+}
