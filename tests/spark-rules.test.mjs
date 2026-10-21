@@ -66,3 +66,22 @@ test(`customer archival refuses missing audit or forged admin transaction`,async
  }));
  await assertFails(updateDoc(doc(db(`manager`),`customers/C1`),{deleted:true}));
 });
+
+test(\`ten-customer archive uses the exact production batch transaction\`,async()=>{
+ const d=db(\`admin\`),fr=doc(d,\`finance/2027\`),batchId=\`bulk-10\`;
+ await env.withSecurityRulesDisabled(async c=>{const clean=c.firestore();await Promise.all([8,9].map(i=>setDoc(doc(clean,\`customers/C\${i}\`),customer(i))))});
+ const ids=Array.from({length:10},(_,i)=>\`C\${i}\`),refs=ids.map(code=>doc(d,\`customers/\${code}\`));
+ await assertSucceeds(runTransaction(d,async tx=>{
+  const fs=await tx.get(fr),snaps=await Promise.all(refs.map(r=>tx.get(r)));
+  assert.equal(snaps.length,10);
+  tx.update(fr,{rosterEpoch:(fs.data().rosterEpoch||0)+1,mutation:{
+    kind:\`archiveCustomers\`,uid:\`admin\`,at:serverTimestamp(),batchId,codes:ids,count:ids.length,
+  }});
+  for(const r of refs)tx.update(r,{deleted:true,visits:{},visitingTeams:[],archivedBy:\`admin\`,archivedAt:serverTimestamp(),updatedAt:serverTimestamp()});
+  tx.set(doc(d,\`audit/\${batchId}\`),{kind:\`archiveCustomers\`,uid:\`admin\`,
+    before:{customers:snaps.map(s=>({code:s.data().code,name:s.data().name,specialty:s.data().specialty,area:s.data().area}))},
+    after:{codes:ids,count:ids.length},at:serverTimestamp(),
+  });
+ }));
+ for(const r of refs)assert.equal((await getDoc(r)).data().deleted,true);
+});
