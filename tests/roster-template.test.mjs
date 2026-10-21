@@ -1,6 +1,6 @@
-import test from `node:test`;
-import assert from `node:assert/strict`;
-import { buildRosterTemplate, readRosterTemplate } from `../src/roster-template.js`;
+import test from "node:test";
+import assert from "node:assert/strict";
+import { buildRosterTemplate, readRosterTemplate } from "../src/roster-template.js";
 
 const team = { id: `cardio-2`, name: `Cardio Team 2` };
 const fileOf = async (workbook) => ({
