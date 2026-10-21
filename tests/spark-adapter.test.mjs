@@ -38,6 +38,14 @@ test(`Spark adapter: bootstrap, provisioning, imports, distribution, reset and o
  await request(`saveActivity`,{...d,id:a,notes:`التعديل بعد إعادة كلمة المرور`});
  await signOut(auth);await signInWithEmailAndPassword(auth,email,pass);
  await upload(t1,[c2]);data=await request(`load`);assert.ok(!data.rosters.find(r=>r.teamId===t1).rows.some(c=>c.code===`001`));assert.equal(data.activities.length,1);
+ await request(`archiveCustomers`,{rows:[{code:`001`,name:`الاسم المعتمد الأخير`,specialty:`قلب`,area:`عمان`}]});
+ data=await request(`load`);
+ assert.equal(data.customers.length,1);
+ assert.equal(data.activities.length,1);
+ assert.ok(!data.rosters.some(r=>r.rows.some(c=>c.code===`001`)));
+ assert.equal((await getDoc(doc(db,`customers/001`))).data().deleted,true);
+ await assert.rejects(request(`archiveCustomers`,{rows:[{code:`002`,name:`خاطئ`,specialty:`قلب`,area:`عمان`}]}),/تغيرت بيانات/);
+
  await signOut(auth);await signInWithEmailAndPassword(auth,newEmail,`NewLocal-Password-43`);
  await assert.rejects(request(`saveActivity`,d));await request(`saveActivity`,{...d,id:a,notes:`بقاء النشاط التاريخي بعد الاستبدال`});
  }finally{await signOut(auth);await env.cleanup();}

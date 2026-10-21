@@ -41,3 +41,28 @@ test(`preconfigured first admin may bootstrap safely without a setup document`,a
 test(`bootstrap cannot be claimed by an unchosen identity`,async()=>{await assertFails(setDoc(doc(db(`stranger`),`users/stranger`),{name:`مسؤول النظام`,username:`admin`,role:`admin`,accountId:`stranger`,teamId:null,active:true,current:true}));});
 test(`team cannot forge a standalone balance or validation summary`,async()=>{await assertFails(updateDoc(doc(db(),`budgets/t0`),{used:0,mutation:{activityId:`fake`,rev:1,uid:`u1`,at:serverTimestamp()}}));await assertFails(setDoc(doc(db(),`proposals/missing/checks/rows`),{ok:true}));});
 test(`team cannot cancel; manager cancellation retains actual expense`,async()=>{await persist(db(),`cancel`,draft());const a=draft();a.actual=6000;a.clients[0].actual=6000;a.clients[0].shares.forEach(s=>s.actual=3000);await persist(db(),`cancel`,a);a.status=`cancelled`;await assertFails(persist(db(),`cancel`,a));await assertSucceeds(persist(db(`manager`),`cancel`,a,{uid:`manager`,accountId:`manager`}));assert.equal((await getDoc(doc(db(),`budgets/t0`))).data().used,3000);});
+
+test(`admin archives customers atomically and cannot change protected records`,async()=>{
+ const d=db(`admin`),fr=doc(d,`finance/2027`),ref=doc(d,`customers/C0`),batchId=`arch-safety-test`;
+ await assertSucceeds(runTransaction(d,async tx=>{
+  const [f,c]=await Promise.all([tx.get(fr),tx.get(ref)]);
+  assert.equal(c.data().code,`C0`);
+  tx.update(fr,{rosterEpoch:(f.data().rosterEpoch||0)+1,
+   mutation:{kind:`archiveCustomers`,uid:`admin`,at:serverTimestamp(),batchId,codes:[`C0`],count:1}});
+  tx.update(ref,{deleted:true,visitingTeams:[],visits:{},archivedBy:`admin`,archivedAt:serverTimestamp(),updatedAt:serverTimestamp()});
+  tx.set(doc(d,`audit/${batchId}`),{kind:`archiveCustomers`,uid:`admin`,before:{customers:[{code:`C0`}]},after:{codes:[`C0`],count:1},at:serverTimestamp()});
+ }));
+ assert.equal((await getDoc(ref)).data().deleted,true);
+ await assertFails(updateDoc(ref,{deleted:false}));
+ await assertFails(updateDoc(doc(db(`u1`),`customers/C0`),{deleted:false}));
+});
+test(`customer archival refuses missing audit or forged admin transaction`,async()=>{
+ const d=db(`admin`),fr=doc(d,`finance/2027`),ref=doc(d,`customers/C0`);
+ await assertFails(runTransaction(d,async tx=>{
+  const f=await tx.get(fr),batchId=`unlogged`;
+  tx.update(fr,{rosterEpoch:(f.data().rosterEpoch||0)+1,
+   mutation:{kind:`archiveCustomers`,uid:`admin`,at:serverTimestamp(),batchId,codes:[`C0`],count:1}});
+  tx.update(ref,{deleted:true,visitingTeams:[],visits:{},archivedBy:`admin`,archivedAt:serverTimestamp(),updatedAt:serverTimestamp()});
+ }));
+ await assertFails(updateDoc(doc(db(`manager`),`customers/C1`),{deleted:true}));
+});
