@@ -246,6 +246,7 @@ export function App() {
     [user, setUser] = useState(isDemo ? { uid: `demo` } : null),
     [ready, setReady] = useState(isDemo),
     [loading, setLoading] = useState(false),
+    [loadError, setLoadError] = useState(``),
     [busy, setBusy] = useState(false),
     [toast, setToast] = useState(null),
     [page, setPage] = useState(
@@ -277,10 +278,12 @@ export function App() {
   }, [toast]);
   async function reload() {
     setLoading(true);
+    setLoadError(``);
     try {
       const d = await request(`load`);
       setData(d);
     } catch (e) {
+      setLoadError(e.message);
       notify(
         `تعذر تحميل البيانات: ${e.message}. تأكد من نشر القواعد الجديدة وتفعيل ملف حسابك في Firestore`,
       );
@@ -584,7 +587,8 @@ export function App() {
           </>
         ) : (
           <>
-            <p>تعذر تحميل النظام — تحقق من القواعد الجديدة ومن سجل حسابك</p>
+            <p>تعذر تحميل النظام</p>
+            <p role="alert" style={{maxWidth: `640px`, padding: `0 20px`, lineHeight: 1.9, overflowWrap: `anywhere`}}>{loadError || `اضغط إعادة المحاولة لعرض سبب الخطأ`}</p>
             <button className="primary" onClick={reload}>
               إعادة المحاولة
             </button>

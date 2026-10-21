@@ -14,8 +14,8 @@ const list=s=>s.docs.map(d=>({id:d.id,...d.data()}));
 const uid=()=>{fail(auth.currentUser,`سجل الدخول أولا`);return auth.currentUser.uid};
 const clean=(v,n=200)=>String(v??``).trim().slice(0,n);
 const id=()=>doc(collection(db,`ids`)).id;
-async function profile(){const u=uid(),ref=doc(db,`users/${u}`);let s=await getDoc(ref);if(!s.exists()){const setup=await getDoc(doc(db,`setup/bootstrap`));if(setup.data()?.adminUid===u){await setDoc(ref,{name:`مسؤول النظام`,username:`admin`,role:`admin`,accountId:u,teamId:null,active:true,current:true});s=await getDoc(ref);}}
- fail(s.exists()&&s.data().active,`الحساب غير مفعل. تهيئة المسؤول الأول موضحة في setup.html`);
+async function profile(){const u=uid(),ref=doc(db,`users/${u}`);let s=await getDoc(ref);if(!s.exists()){const setup=await getDoc(doc(db,`setup/bootstrap`));fail(setup.exists(),`مستند setup/bootstrap غير موجود في مشروع dadactionplan. UID حسابك الحالي: ${u}`);fail(setup.data()?.adminUid===u,`قيمة adminUid في setup/bootstrap لا تطابق الحساب الذي سجلت به. UID الحساب الحالي: ${u} — انسخه إلى adminUid إذا كان هذا حساب المسؤول المقصود`);if(setup.data()?.adminUid===u){await setDoc(ref,{name:`مسؤول النظام`,username:`admin`,role:`admin`,accountId:u,teamId:null,active:true,current:true});s=await getDoc(ref);}}
+ fail(s.exists()&&s.data().active,`ملف الحساب users/${u} موجود لكنه معطل. فعّل active من Firebase Console لحساب المسؤول المقصود`);
  const p={...s.data(),accountId:s.data().accountId||u};if(p.role===`admin`&&p.username){const l=doc(db,`logins/${p.username}`);await runTransaction(db,async tx=>{const old=await tx.get(l);if(!old.exists())tx.set(l,{uid:u,email:auth.currentUser.email,accountId:p.accountId});});}return p;}
 
 const manager=p=>fail([`admin`,`manager`].includes(p.role),`هذه العملية للإدارة فقط`);

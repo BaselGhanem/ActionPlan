@@ -11,6 +11,9 @@ test(`Spark adapter: bootstrap, provisioning, imports, distribution, reset and o
  try{
  await env.clearFirestore();
  const email=`admin-${Date.now()}@users.dadactionplan.app`,pass=`LocalTest-Password-42`,admin=(await createUserWithEmailAndPassword(auth,email,pass)).user;
+ await assert.rejects(request(`load`),/setup\/bootstrap غير موجود/);
+ await env.withSecurityRulesDisabled(c=>setDoc(doc(c.firestore(),`setup/bootstrap`),{adminUid:`different-uid`}));
+ await assert.rejects(request(`load`),/لا تطابق/);
  await env.withSecurityRulesDisabled(c=>setDoc(doc(c.firestore(),`setup/bootstrap`),{adminUid:admin.uid}));
  let data=await request(`load`);assert.equal(data.profile.role,`admin`);assert.equal(data.teams.length,0);
  const t1=(await request(`saveTeam`,{name:`Cardio`,budget:100000})).id,t2=(await request(`saveTeam`,{name:`Primary`,budget:100000})).id;
