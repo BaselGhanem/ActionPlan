@@ -1,0 +1,11 @@
+node_modules/
+functions/node_modules/
+dist/
+.firebase/
+*-debug.log
+.env*
+!.env.example
+service-account*.json
+*credentials*.json
+public/qa-*.html
+qa/
