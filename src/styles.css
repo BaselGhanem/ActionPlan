@@ -1776,3 +1776,11 @@ tfoot td {
   .roster-upload .roster-step-number { width: 30px; height: 30px; }
   .roster-upload .roster-actions button { width: 100%; justify-content: center; }
 }
+
+/* Admin-only customer archive actions */
+.directory-actions { display:flex; flex-wrap:wrap; align-items:center; gap:9px; }
+.archive-bulk-button { background:#fff4f4; padding:8px 12px; border:1px solid #f1b9b9; border-radius:9px; }
+.customer-delete-button { border:1px solid #f4cece; border-radius:7px; display:inline-flex; align-items:center; gap:5px; padding:5px 8px; font-size:11px; white-space:nowrap; }
+.customer-delete-button:hover:not(:disabled), .archive-bulk-button:hover:not(:disabled) { background:#ffe7e7; }
+.customer-admin-col { min-width:90px; }
+@media(max-width:680px) { .directory-actions { width:100%; } }

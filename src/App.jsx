@@ -251,6 +251,8 @@ export function App() {
     [nav, setNav] = useState(false),
     [draft, setDraft] = useState(null),
     [confirm, setConfirm] = useState(null),
+    [confirmText, setConfirmText] = useState(``),
+    [archiveProgress, setArchiveProgress] = useState(``),
     [audit, setAudit] = useState(null),
     [picker, setPicker] = useState(false),
     [pickerSearch, setPickerSearch] = useState(``);
@@ -353,6 +355,37 @@ export function App() {
   }
   const eligible = (c) =>
     data.teams.filter((t) => rosterMap.get(t.id)?.has(c.code));
+  const canManageCustomers = data?.profile.role === `admin` && !isDemo;
+  const hasDirectoryFilter = Object.values(filters).some(value => String(value||``).trim());
+  function openCustomerArchive(customers){
+    if(!canManageCustomers || !customers.length) return;
+    const selected=customers.map(c=>({code:c.code,name:c.name,specialty:c.specialty||``,area:c.area||``}));
+    const bulk=selected.length>1;
+    setConfirmText(``);
+    setConfirm({
+      title:bulk ? `حذف ${selected.length} عميل من قوائم الفرق؟` : `حذف ${selected[0].name}؟`,
+      text:`سيختفي هؤلاء العملاء من جميع الفرق، ولن يكونوا متاحين للأنشطة الجديدة. الأنشطة السابقة والميزانيات محفوظة. ${bulk ? `يمكن إعادة العملاء فقط عبر رفع قائمة جديدة، وقد يتطلب الحذف عدة دفعات.` : `يمكن إعادة العميل لاحقا عن طريق القالب.`}`,
+      requiresText:bulk,
+      action:async()=>{
+        let completed=0;
+        try{
+          for(let i=0;i<selected.length;i+=10){
+            await request(`archiveCustomers`,{rows:selected.slice(i,i+10)});
+            completed=Math.min(i+10,selected.length);
+            setArchiveProgress(`تم حذف ${completed} من ${selected.length} عميل`);
+          }
+          setDraft(null);
+          notify(`تم حذف ${completed} عميل من قوائم الفرق، مع الاحتفاظ بسجل الأنشطة`,`success`);
+        }catch(e){
+          notify(`تم حذف ${completed} من ${selected.length} عميل قبل توقف العملية. ${e.message}`);
+          throw e;
+        }finally{
+          setArchiveProgress(``);
+          await reload();
+        }
+      },
+    });
+  }
   function selectClient(c) {
     const current = draft || defaultDraft();
     if (current.clients.some((x) => x.code === c.code)) {
@@ -771,21 +804,23 @@ export function App() {
                     </h2>
                     <p>اختر عميلا أو أكثر لإنشاء نشاط وتوزيع ميزانيته</p>
                   </div>
-                  <button
-                    className="text-button"
-                    onClick={() => {
+                  <div className="directory-actions">
+                    {canManageCustomers && (
+                      <button type="button" className="danger-text archive-bulk-button"
+                        disabled={busy || !hasDirectoryFilter || !visible.length}
+                        title={!hasDirectoryFilter ? `اختر فلتر أو ابحث عن عميل قبل الحذف` : `حذف كل النتائج المطابقة من جميع الفرق`}
+                        onClick={()=>openCustomerArchive(visible)}>
+                        <Trash size={17}/> حذف نتائج الفلاتر ({visible.length})
+                      </button>
+                    )}
+                    <button className="text-button" onClick={() => {
                       setFilters({
-                        search: ``,
-                        team: ``,
-                        specialty: ``,
-                        area: ``,
-                        classification: ``,
-                        kind: ``,
+                        search: ``,team: ``,specialty: ``,area: ``,classification: ``,kind: ``,
                       });
-                    }}
-                  >
-                    مسح الفلاتر
-                  </button>
+                    }}>
+                      مسح الفلاتر
+                    </button>
+                  </div>
                 </div>
                 <div className="table-wrap customer-table">
                   <table>
@@ -799,6 +834,7 @@ export function App() {
                         <th>
                           {selectedTeam ? `تصنيف الفريق` : `الفرق الزائرة`}
                         </th>
+                        {canManageCustomers && <th className="customer-admin-col">الإدارة</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -844,6 +880,16 @@ export function App() {
                                     .join(`، `) || `غير مرتبط بفريق`
                                 )}
                               </td>
+                              {canManageCustomers && (
+                                <td>
+                                  <button type="button" className="danger-text customer-delete-button"
+                                    disabled={busy}
+                                    aria-label={`حذف ${c.name}`}
+                                    onClick={(e)=>{e.stopPropagation();openCustomerArchive([c]);}}>
+                                    <Trash size={16}/> حذف
+                                  </button>
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
@@ -1372,11 +1418,19 @@ export function App() {
           <section className="modal" role="dialog" aria-modal="true">
             <h2>{confirm.title}</h2>
             <p>{confirm.text}</p>
+            {confirm.requiresText && (
+              <Field label="للتأكيد اكتب كلمة حذف">
+                <input autoFocus value={confirmText} autoComplete="off"
+                  onChange={(e)=>setConfirmText(e.target.value)}
+                  placeholder="حذف" aria-label="تأكيد الحذف الجماعي" />
+              </Field>
+            )}
+            {archiveProgress && <p role="status">{archiveProgress}</p>}
             <div className="button-row">
               <button onClick={() => setConfirm(null)}>رجوع</button>
               <button
                 className="primary"
-                disabled={busy}
+                disabled={busy || (confirm.requiresText && confirmText.trim() !== `حذف`)}
                 onClick={async () => {
                   setBusy(true);
                   try {
@@ -1418,6 +1472,7 @@ export function App() {
                       {{
                         saveActivity: `حفظ نشاط`,
                         deleteActivity: `حذف نشاط`,
+                      archiveCustomers: `حذف عملاء من قوائم الفرق`,
                         saveTeam: `تعديل فريق أو ميزانية`,
                         saveTypes: `تعديل أنواع الأنشطة`,
                         createUser: `إنشاء مستخدم`,

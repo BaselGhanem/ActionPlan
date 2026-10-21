@@ -20,3 +20,5 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Rules validation supports up to 8 clients and 8 participating teams per activity; keep limits visible and consistent in UI and rules.
 
 - Customer roster imports use team-bound XLSX templates exclusively; Admin can download a blank template or edit the current roster using the same template. Validate file signature, team ID, headers, mandatory fields, duplicate codes, and numeric codes before replacing the full team list.
+
+- Admin-only customer deletion uses archive/soft removal across ALL team rosters; preserve historical activities and spend. Bulk delete limited to explicitly filtered results, typed confirmation, audit per transaction (10 customers), no concurrent imports. Re-uploading a roster can restore archived customers.
