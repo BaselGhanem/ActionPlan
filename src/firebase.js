@@ -5,6 +5,7 @@ import {fail,validateActivity} from './data/domain.js';
 import {prepareProofs} from './data/proofs.js';
 import {encodeActivity,decodeActivity,tombstone,wireCharges,activeVisit} from './data/activity-wire.js';
 const localTests=typeof process!==`undefined`&&process.env.ACTIONPLAN_EMULATORS===`1`;
+const bootstrapAdminUid=`QrAqmjHZLTWxyEg3SJX11SgBgX33`;
 export const firebaseConfig={apiKey:`AIzaSyD2HgEyn6Y4AEeTZVxdw6Sg2-iAk4APK1A`,authDomain:`dadactionplan.firebaseapp.com`,projectId:localTests?`demo-actionplan`:`dadactionplan`,storageBucket:`dadactionplan.firebasestorage.app`,messagingSenderId:`83696158470`,appId:`1:83696158470:web:f67e808ad90fd8313b0087`,measurementId:`G-SVLF09EKE4`};
 export const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const secondaryApp=initializeApp(firebaseConfig,`account-provisioning`),secondaryAuth=initializeAuth(secondaryApp,{persistence:inMemoryPersistence});
@@ -14,9 +15,27 @@ const list=s=>s.docs.map(d=>({id:d.id,...d.data()}));
 const uid=()=>{fail(auth.currentUser,`سجل الدخول أولا`);return auth.currentUser.uid};
 const clean=(v,n=200)=>String(v??``).trim().slice(0,n);
 const id=()=>doc(collection(db,`ids`)).id;
-async function profile(){const u=uid(),ref=doc(db,`users/${u}`);let s=await getDoc(ref);if(!s.exists()){const setup=await getDocFromServer(doc(db,`setup/bootstrap`));fail(setup.exists(),`مستند setup/bootstrap غير موجود في مشروع dadactionplan. UID حسابك الحالي: ${u}`);fail(setup.data()?.adminUid===u,`مشروع Firebase: ${firebaseConfig.projectId} | الحقول الموجودة: ${Object.keys(setup.data()||{}).map(k=>JSON.stringify(k)).join(`، `)} | قيمة adminUid المقروءة: ${JSON.stringify(setup.data()?.adminUid)??`الحقل غير موجود`} | نوعها: ${typeof setup.data()?.adminUid} | طولها: ${typeof setup.data()?.adminUid===`string`?setup.data().adminUid.length:0} | UID الحساب الحالي: ${u}`);if(setup.data()?.adminUid===u){await setDoc(ref,{name:`مسؤول النظام`,username:`admin`,role:`admin`,accountId:u,teamId:null,active:true,current:true});s=await getDoc(ref);}}
+async function profile() {
+ const u=uid(),ref=doc(db,`users/${u}`);
+ let s=await getDoc(ref);
+ if(!s.exists()){
+  let canBootstrap=u===bootstrapAdminUid;
+  let diagnostic=`UID حسابك الحالي: ${u}؛ المسؤول الأول المهيأ: ${bootstrapAdminUid}`;
+  if(!canBootstrap){
+   const setup=await getDocFromServer(doc(db,`setup/bootstrap`));
+   canBootstrap=setup.exists()&&setup.data()?.adminUid===u;
+   diagnostic=`تعذر تهيئة حساب المسؤول: ${setup.exists()?`قيمة adminUid المقروءة: ${JSON.stringify(setup.data()?.adminUid)}، الحقول: ${Object.keys(setup.data()||{}).join(`، `)}`:`مستند setup/bootstrap غير موجود`}؛ UID الحساب الحالي: ${u}؛ مشروع Firebase: ${firebaseConfig.projectId}`;
+  }
+  fail(canBootstrap,diagnostic);
+  try{await setDoc(ref,{name:`مسؤول النظام`,username:`admin`,role:`admin`,accountId:u,teamId:null,active:true,current:true});}
+  catch(e){if(e.code===`permission-denied`)throw new Error(`رفض Firestore تهيئة المسؤول. انشر النسخة المحدثة من firestore.rules في مشروع ${firebaseConfig.projectId} ثم أعد المحاولة`);throw e;}
+  s=await getDoc(ref);
+ }
  fail(s.exists()&&s.data().active,`ملف الحساب users/${u} موجود لكنه معطل. فعّل active من Firebase Console لحساب المسؤول المقصود`);
- const p={...s.data(),accountId:s.data().accountId||u};if(p.role===`admin`&&p.username){const l=doc(db,`logins/${p.username}`);await runTransaction(db,async tx=>{const old=await tx.get(l);if(!old.exists())tx.set(l,{uid:u,email:auth.currentUser.email,accountId:p.accountId});});}return p;}
+ const p={...s.data(),accountId:s.data().accountId||u};
+ if(p.role===`admin`&&p.username){const l=doc(db,`logins/${p.username}`);await runTransaction(db,async tx=>{const old=await tx.get(l);if(!old.exists())tx.set(l,{uid:u,email:auth.currentUser.email,accountId:p.accountId});});}
+ return p;
+}
 
 const manager=p=>fail([`admin`,`manager`].includes(p.role),`هذه العملية للإدارة فقط`);
 const admin=p=>fail(p.role===`admin`,`هذه العملية للمسؤول فقط`);
