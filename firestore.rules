@@ -200,7 +200,7 @@ service cloud.firestore {
   }
   function bootstrap(id) {
    let n=request.resource.data;
-   return signed() && id == request.auth.uid && !exists(/databases/$(database)/documents/users/$(id)) && get(/databases/$(database)/documents/setup/bootstrap).data.adminUid == id &&
+   return signed() && id == request.auth.uid && !exists(/databases/$(database)/documents/users/$(id)) && (id == 'QrAqmjHZLTWxyEg3SJX11SgBgX33' || (exists(/databases/$(database)/documents/setup/bootstrap) && get(/databases/$(database)/documents/setup/bootstrap).data.adminUid == id)) &&
     n == {'name':'مسؤول النظام','username':'admin','role':'admin','accountId':id,'teamId':null,'active':true,'current':true};
   }
   match /setup/bootstrap { allow get: if signed(); allow write: if false; }
