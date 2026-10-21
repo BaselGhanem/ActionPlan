@@ -36,7 +36,7 @@ import {
   setPersistence,
 } from "firebase/auth";
 import { auth, request, resolveLogin } from "./firebase";
-import { directoryKeys, reportKeys, matchingRows, facetOptions, selectedOptions } from "./data/cascading-filters";
+import { EMPTY_SPECIALTY, directoryKeys, reportKeys, matchingRows, facetOptions, selectedOptions } from "./data/cascading-filters";
 import { demoData } from "./demo";
 import {
   equally,
@@ -763,7 +763,7 @@ export function App() {
                   >
                     <option value="">جميع التخصصات</option>
                     {directoryOptions.specialty.map((v) => (
-                      <option key={v}>{v}</option>
+                      <option key={v} value={v}>{v === EMPTY_SPECIALTY ? `بدون تخصص` : v}</option>
                     ))}
                   </select>
                 </Field>
@@ -1730,7 +1730,8 @@ function Reports({ data, exportExcel, busy }) {
     [`unscheduled`,`غير مجدول`],
   ]);
   const labelOf = (key,value) => key===`team` ? teamLabels.get(value)||value
-    : key===`month` ? months[value]||value : key===`status` ? statusText[value]||value : value;
+    : key===`month` ? months[value]||value : key===`status` ? statusText[value]||value
+    : key===`specialty` && value===EMPTY_SPECIALTY ? `بدون تخصص` : value;
   const filterFields = [
     [`team`,`الفريق`],[`month`,`الشهر`],[`type`,`نوع النشاط`],
     [`status`,`الحالة`],[`area`,`المنطقة`],[`specialty`,`التخصص`],[`classification`,`التصنيف`],

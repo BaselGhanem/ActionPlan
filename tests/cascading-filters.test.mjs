@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {directoryKeys,reportKeys,matchingRows,facetOptions,selectedOptions} from "../src/data/cascading-filters.js";
+import {EMPTY_SPECIALTY,directoryKeys,reportKeys,matchingRows,facetOptions,selectedOptions} from "../src/data/cascading-filters.js";
 const dirs = [
  {team:`A`,specialty:`Cardio`,area:`Amman`,classification:`A`,kind:`Doctor`},
  {team:`B`,specialty:`Cardio`,area:`Amman`,classification:`B`,kind:`Doctor`},
@@ -42,4 +42,31 @@ test(`report facets cascade through month, status, type and team`,()=>{
 });
 test(`each facet ignores only its own current selection`,()=>{
  assert.deepEqual(facetOptions(reports,{...rf,team:`B`,month:`01`,status:`planned`},reportKeys,`team`),[`A`,`B`]);
+});
+
+test(`directory specialty filter shows and selects missing values, without losing cascading`,()=>{
+ const entries=[
+  ...dirs,
+  {team:`A`,specialty:``,area:`Amman`,classification:`B`,kind:`Doctor`,code:`blank`},
+  {team:`B`,specialty:null,area:`Irbid`,classification:`A`,kind:`Doctor`,code:`null`},
+  {team:`B`,specialty:`   `,area:`Amman`,classification:`C`,kind:`Doctor`,code:`spaces`},
+ ];
+ assert.deepEqual(facetOptions(entries,{...df,team:`A`},directoryKeys,`specialty`),[`Cardio`,EMPTY_SPECIALTY]);
+ const filtered=matchingRows(entries,{...df,specialty:EMPTY_SPECIALTY},directoryKeys);
+ assert.deepEqual(filtered.map(c=>c.code),[`blank`,`null`,`spaces`]);
+ assert.deepEqual(facetOptions(entries,{...df,team:`B`,specialty:EMPTY_SPECIALTY},directoryKeys,`area`),[`Amman`,`Irbid`]);
+ assert.deepEqual(facetOptions(entries,{...df,area:`Amman`,specialty:EMPTY_SPECIALTY},directoryKeys,`team`),[`A`,`B`]);
+ assert.deepEqual(facetOptions(entries,{...df,team:`B`,specialty:EMPTY_SPECIALTY},directoryKeys,`classification`),[`A`,`C`]);
+ assert.equal(matchingRows(entries,{...df,team:`A`,specialty:EMPTY_SPECIALTY},directoryKeys).length,1);
+});
+test(`report specialty filter includes empty historical specialty`,()=>{
+ const r=[
+  ...reports,
+  {team:`B`,month:`02`,type:`Seminar`,status:`planned`,area:`Amman`,specialty:``,classification:`A`},
+  {team:`A`,month:`03`,type:`Congress`,status:`executed`,area:`Irbid`,specialty:null,classification:`C`},
+ ];
+ assert.ok(facetOptions(r,rf,reportKeys,`specialty`).includes(EMPTY_SPECIALTY));
+ assert.equal(matchingRows(r,{...rf,specialty:EMPTY_SPECIALTY},reportKeys).length,2);
+ assert.deepEqual(facetOptions(r,{...rf,team:`B`,specialty:EMPTY_SPECIALTY},reportKeys,`month`),[`02`]);
+ assert.deepEqual(facetOptions(r,{...rf,status:`cancelled`},reportKeys,`specialty`),[`Pediatric`]);
 });
