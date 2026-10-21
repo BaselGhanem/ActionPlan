@@ -36,6 +36,7 @@ import {
   setPersistence,
 } from "firebase/auth";
 import { auth, request, resolveLogin } from "./firebase";
+import { directoryKeys, reportKeys, matchingRows, facetOptions, selectedOptions } from "./data/cascading-filters";
 import { demoData } from "./demo";
 import {
   equally,
@@ -311,26 +312,38 @@ export function App() {
       ),
     [data],
   );
-  const visible = useMemo(() => {
+  const directoryRows = useMemo(() => {
     if (!data) return [];
-    return data.customers.filter((c) => {
-      const r = rosterMap.get(filters.team)?.get(c.code),
-        q = filters.search.trim().toLowerCase();
-      return (
-        (!q || `${c.name} ${c.code}`.toLowerCase().includes(q)) &&
-        (!filters.team || r) &&
-        (!filters.specialty || c.specialty === filters.specialty) &&
-        (!filters.area || c.area === filters.area) &&
-        (!filters.kind || c.kind === filters.kind) &&
-        (!filters.classification ||
-          r?.classification === filters.classification)
-      );
+    const affiliations = new Map();
+    for (const roster of data.rosters)
+      for (const c of roster.rows) {
+        const entries = affiliations.get(c.code) || [];
+        entries.push({team: roster.teamId, classification: c.classification || ``});
+        affiliations.set(c.code, entries);
+      }
+    return data.customers.flatMap(c => {
+      const base = {
+        code: c.code, specialty: c.specialty || ``, area: c.area || ``, kind: c.kind || ``,
+        searchText: `${c.name} ${c.code}`.toLocaleLowerCase(),
+      };
+      return (affiliations.get(c.code) || [{team: ``,classification: ``}])
+        .map(member => ({...base,...member}));
     });
-  }, [data, filters, rosterMap]);
-  const options = (key) =>
-    [
-      ...new Set((data?.customers || []).map((c) => c[key]).filter(Boolean)),
-    ].sort();
+  }, [data]);
+  const searchedDirectory = useMemo(() => {
+    const search = filters.search.trim().toLocaleLowerCase();
+    return search ? directoryRows.filter(row => row.searchText.includes(search)) : directoryRows;
+  }, [directoryRows, filters.search]);
+  const directoryOptions = useMemo(() =>
+    Object.fromEntries([`team`,`specialty`,`area`,`classification`].map(key=>[
+      key,
+      selectedOptions(facetOptions(searchedDirectory, filters, directoryKeys, key),filters[key]),
+    ])), [searchedDirectory,filters]);
+  const visible = useMemo(() => {
+    if(!data) return [];
+    const codes = new Set(matchingRows(searchedDirectory, filters, directoryKeys).map(row=>row.code));
+    return data.customers.filter(c=>codes.has(c.code));
+  }, [data,searchedDirectory,filters]);
   function changeFilter(key, value) {
     setFilters((f) => ({
       ...f,
@@ -703,7 +716,7 @@ export function App() {
                     onChange={(e) => changeFilter(`team`, e.target.value)}
                   >
                     <option value="">جميع الفرق</option>
-                    {data.teams.map((t) => (
+                    {data.teams.filter(t => directoryOptions.team.includes(t.id)).map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name}
                       </option>
@@ -716,7 +729,7 @@ export function App() {
                     onChange={(e) => changeFilter(`specialty`, e.target.value)}
                   >
                     <option value="">جميع التخصصات</option>
-                    {options(`specialty`).map((v) => (
+                    {directoryOptions.specialty.map((v) => (
                       <option key={v}>{v}</option>
                     ))}
                   </select>
@@ -727,7 +740,7 @@ export function App() {
                     onChange={(e) => changeFilter(`area`, e.target.value)}
                   >
                     <option value="">جميع المناطق</option>
-                    {options(`area`).map((v) => (
+                    {directoryOptions.area.map((v) => (
                       <option key={v}>{v}</option>
                     ))}
                   </select>
@@ -743,17 +756,7 @@ export function App() {
                     <option value="">
                       {filters.team ? `جميع التصنيفات` : `اختر فريقا أولا`}
                     </option>
-                    {[
-                      ...new Set(
-                        (
-                          data.rosters.find((r) => r.teamId === filters.team)
-                            ?.rows || []
-                        )
-                          .map((c) => c.classification)
-                          .filter(Boolean),
-                      ),
-                    ]
-                      .sort()
+                    {directoryOptions.classification
                       .map((v) => (
                         <option key={v}>{v}</option>
                       ))}
@@ -1575,7 +1578,11 @@ function Activities({ data, onOpen }) {
         />
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">جميع الحالات</option>
-          {Object.entries(statusText).map(([k, v]) => (
+          {Object.entries(statusText).filter(([key]) =>
+            key === status || data.activities.some(a =>
+              a.status === key && (!q ||
+                `${a.type} ${a.clients.map(c => c.name).join(` `)} ${a.id}`.includes(q)),
+            )).map(([k, v]) => (
             <option key={k} value={k}>
               {v}
             </option>
@@ -1640,32 +1647,39 @@ function Reports({ data, exportExcel, busy }) {
       specialty: ``,
       classification: ``,
     });
-  const activities = data.activities.filter(
-    (a) =>
-      (!filters.month ||
-        (filters.month === `unscheduled`
-          ? !a.date
-          : a.date?.slice(5, 7) === filters.month)) &&
-      (!filters.type || a.type === filters.type) &&
-      (!filters.status || a.status === filters.status),
-  );
-  const rows = activities.flatMap((a) =>
-    a.clients.flatMap((c) =>
-      c.shares
-        .filter(
-          (s) =>
-            (!filters.team || s.teamId === filters.team) &&
-            (!filters.area || c.area === filters.area) &&
-            (!filters.specialty || c.specialty === filters.specialty) &&
-            (!filters.classification ||
-              data.rosters
-                .find((r) => r.teamId === s.teamId)
-                ?.rows.find((r) => r.code === c.code)?.classification ===
-                filters.classification),
-        )
-        .map((s) => ({ activity: a, client: c, share: s })),
-    ),
-  );
+  const reportSourceRows = useMemo(() => {
+    const rosters = new Map(data.rosters.map(r => [
+      r.teamId, new Map(r.rows.map(c=>[c.code,c.classification || ``])),
+    ]));
+    return data.activities.flatMap(activity => activity.clients.flatMap(client =>
+      client.shares.map(share => ({
+        activity, client, share, team: share.teamId,
+        month: activity.date?.slice(5,7) || `unscheduled`,
+        type: activity.type, status: activity.status,
+        area: client.area || ``, specialty: client.specialty || ``,
+        classification: rosters.get(share.teamId)?.get(client.code) || ``,
+      })),
+    ));
+  }, [data]);
+  const reportOptions = useMemo(() =>
+    Object.fromEntries(reportKeys.map(key => [
+      key, selectedOptions(facetOptions(reportSourceRows,filters,reportKeys,key), filters[key]),
+    ])), [reportSourceRows,filters]);
+  const rows = matchingRows(reportSourceRows, filters, reportKeys);
+  const teamLabels = new Map(data.teams.map(team=>[team.id,team.name]));
+  const months = Object.fromEntries([
+    ...Array.from({length:12},(_,i)=>[
+      String(i+1).padStart(2,`0`),
+      new Date(2027,i,1).toLocaleDateString(`ar-JO`,{month:`long`}),
+    ]),
+    [`unscheduled`,`غير مجدول`],
+  ]);
+  const labelOf = (key,value) => key===`team` ? teamLabels.get(value)||value
+    : key===`month` ? months[value]||value : key===`status` ? statusText[value]||value : value;
+  const filterFields = [
+    [`team`,`الفريق`],[`month`,`الشهر`],[`type`,`نوع النشاط`],
+    [`status`,`الحالة`],[`area`,`المنطقة`],[`specialty`,`التخصص`],[`classification`,`التصنيف`],
+  ];
   const groups = new Map();
   rows.forEach((r) => {
     const key =
@@ -1723,75 +1737,19 @@ function Reports({ data, exportExcel, busy }) {
         ))}
       </div>
       <div className="report-filters">
-        {[
-          [`team`, `الفريق`, data.teams.map((t) => [t.id, t.name])],
-          [
-            `month`,
-            `الشهر`,
-            [
-              ...Array.from({ length: 12 }, (_, i) => [
-                String(i + 1).padStart(2, `0`),
-                new Date(2027, i, 1).toLocaleDateString(`ar-JO`, {
-                  month: `long`,
-                }),
-              ]),
-              [`unscheduled`, `غير مجدول`],
-            ],
-          ],
-          [`type`, `نوع النشاط`, data.settings.types.map((t) => [t, t])],
-          [`status`, `الحالة`, Object.entries(statusText)],
-          [
-            `area`,
-            `المنطقة`,
-            [...new Set(data.customers.map((c) => c.area).filter(Boolean))].map(
-              (t) => [t, t],
-            ),
-          ],
-          [
-            `specialty`,
-            `التخصص`,
-            [
-              ...new Set(
-                data.customers.map((c) => c.specialty).filter(Boolean),
-              ),
-            ].map((t) => [t, t]),
-          ],
-          [
-            `classification`,
-            `التصنيف`,
-            [
-              ...new Set(
-                (
-                  data.rosters.find((r) => r.teamId === filters.team)?.rows ||
-                  []
-                )
-                  .map((c) => c.classification)
-                  .filter(Boolean),
-              ),
-            ].map((t) => [t, t]),
-          ],
-        ].map(([key, label, opts]) => (
+        {filterFields.map(([key, label]) => (
           <Field key={key} label={label}>
             <select
               disabled={key === `classification` && !filters.team}
               value={filters[key]}
-              onChange={(e) =>
-                setFilters((f) => ({
-                  ...f,
-                  [key]: e.target.value,
-                  ...(key === `team` ? { classification: `` } : {}),
-                }))
-              }
+              onChange={(e) => setFilters(f => ({
+                ...f, [key]: e.target.value,
+                ...(key===`team` ? {classification: ``} : {}),
+              }))}
             >
-              <option value="">
-                {key === `classification` && !filters.team
-                  ? `اختر فريقا أولا`
-                  : `الكل`}
-              </option>
-              {opts.map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
+              <option value="">{key === `classification` && !filters.team ? `اختر فريقا أولا` : `الكل`}</option>
+              {reportOptions[key].map(value => (
+                <option key={value} value={value}>{labelOf(key,value)}</option>
               ))}
             </select>
           </Field>
