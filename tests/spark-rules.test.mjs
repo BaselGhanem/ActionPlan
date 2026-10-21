@@ -31,6 +31,13 @@ test(`disabled identities lose data access; public login mapping contains no pas
 
 test(`maximum activity actual update is also valid`,async()=>{await persist(db(),`bigactual`,draft(8000,8,8));const a=draft(8000,8,8);a.actual=32000;a.status=`executed`;for(const c of a.clients){c.actual=4000;for(const x of c.shares)x.actual=500;}await assertSucceeds(persist(db(),`bigactual`,a));});
 
+test(`preconfigured first admin may bootstrap safely without a setup document`,async()=>{
+ const firstUid=`QrAqmjHZLTWxyEg3SJX11SgBgX33`,d=db(firstUid);
+ const identity={name:`مسؤول النظام`,username:`admin`,role:`admin`,accountId:firstUid,teamId:null,active:true,current:true};
+ await assertSucceeds(setDoc(doc(d,`users/${firstUid}`),identity));
+ assert.equal((await getDoc(doc(d,`users/${firstUid}`))).data().role,`admin`);
+ await assertFails(setDoc(doc(db(`stranger`),`users/stranger`),{...identity,accountId:`stranger`}));
+});
 test(`bootstrap cannot be claimed by an unchosen identity`,async()=>{await assertFails(setDoc(doc(db(`stranger`),`users/stranger`),{name:`مسؤول النظام`,username:`admin`,role:`admin`,accountId:`stranger`,teamId:null,active:true,current:true}));});
 test(`team cannot forge a standalone balance or validation summary`,async()=>{await assertFails(updateDoc(doc(db(),`budgets/t0`),{used:0,mutation:{activityId:`fake`,rev:1,uid:`u1`,at:serverTimestamp()}}));await assertFails(setDoc(doc(db(),`proposals/missing/checks/rows`),{ok:true}));});
 test(`team cannot cancel; manager cancellation retains actual expense`,async()=>{await persist(db(),`cancel`,draft());const a=draft();a.actual=6000;a.clients[0].actual=6000;a.clients[0].shares.forEach(s=>s.actual=3000);await persist(db(),`cancel`,a);a.status=`cancelled`;await assertFails(persist(db(),`cancel`,a));await assertSucceeds(persist(db(`manager`),`cancel`,a,{uid:`manager`,accountId:`manager`}));assert.equal((await getDoc(doc(db(),`budgets/t0`))).data().used,3000);});
