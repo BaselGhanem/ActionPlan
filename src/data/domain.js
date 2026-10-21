@@ -48,9 +48,10 @@ export function validateActivity(a) {
     `أدخل إجمالي النشاط`,
   );
   fail(
-    Array.isArray(a.clients) && a.clients.length > 0 && a.clients.length <= 100,
-    `اختر من عميل إلى 100 عميل`,
+    Array.isArray(a.clients) && a.clients.length > 0 && a.clients.length <= 8,
+    `اختر من عميل إلى 8 عملاء`,
   );
+  fail(new Set(a.clients.flatMap(c=>c.shares.map(s=>s.teamId))).size<=8,`النشاط يدعم حتى 8 فرق مشاركة`);
   fail(
     new Set(a.clients.map((c) => c.code)).size === a.clients.length,
     `العميل مكرر في النشاط`,

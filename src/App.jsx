@@ -35,7 +35,7 @@ import {
   browserSessionPersistence,
   setPersistence,
 } from "firebase/auth";
-import { auth, request } from "./firebase";
+import { auth, request, resolveLogin } from "./firebase";
 import { demoData } from "./demo";
 import {
   equally,
@@ -43,7 +43,7 @@ import {
   validateActivity,
   charges,
   cents,
-} from "../functions/domain";
+} from "./data/domain";
 import {
   columns,
   autoMap,
@@ -170,7 +170,7 @@ function Login({ onError, loading }) {
       );
       await signInWithEmailAndPassword(
         auth,
-        `${username.trim().toLowerCase()}@users.dadactionplan.app`,
+        await resolveLogin(username),
         password,
       );
     } catch (e) {
@@ -232,6 +232,7 @@ function Login({ onError, loading }) {
           <LockKey size={19} />
           {busy ? `جار الدخول…` : `دخول النظام`}
         </button>
+        <a className="demo-link" href="setup.html">تهيئة المسؤول الأول ونشر القواعد</a>
         <a className="demo-link" href="?demo=1">
           استعراض تجريبي منفصل — دون تعديل بيانات Firebase
         </a>
@@ -281,7 +282,7 @@ export function App() {
       setData(d);
     } catch (e) {
       notify(
-        `تعذر تحميل البيانات: ${e.message}. تأكد من نشر وظائف Firebase وتفعيل حسابك`,
+        `تعذر تحميل البيانات: ${e.message}. تأكد من نشر القواعد الجديدة وتفعيل ملف حسابك في Firestore`,
       );
     } finally {
       setLoading(false);
@@ -354,6 +355,7 @@ export function App() {
       notify(`يمكنك استعراض العميل، لكن إنشاء النشاط متاح لعملاء فريقك فقط`);
       return;
     }
+    if(current.clients.length>=8){notify(`النشاط الواحد يدعم حتى 8 عملاء`);return;}
     const myTeam = eligible(c).find((t) => t.id === data.profile.teamId),
       newClient = {
         ...c,
@@ -582,7 +584,7 @@ export function App() {
           </>
         ) : (
           <>
-            <p>تعذر تحميل النظام — تحقق من نشر وظائف Firebase ومن سجل حسابك</p>
+            <p>تعذر تحميل النظام — تحقق من القواعد الجديدة ومن سجل حسابك</p>
             <button className="primary" onClick={reload}>
               إعادة المحاولة
             </button>
@@ -593,7 +595,7 @@ export function App() {
       </main>
     );
   const oldDraft = data.activities.find((a) => a.id === draft?.id),
-    canEdit = draft && (manager || !draft.id || draft.creator === user.uid);
+    canEdit = draft && (manager || !draft.id || draft.creator === (data.profile.accountId || user.uid));
   return (
     <div className={`app ${draft ? `has-drawer` : ``}`}>
       <aside className={`sidebar ${nav ? `mobile-open` : ``}`}>
@@ -945,7 +947,7 @@ export function App() {
                       </p>
                     </>
                   ) : (
-                    <p>حصة مستقلة لكل عميل، ثم توزيعها على فرقه</p>
+                    <p>حصة مستقلة لكل عميل، ثم توزيعها على فرقه • حتى 8 عملاء و8 فرق</p>
                   )}
                 </div>
                 <button
@@ -1926,10 +1928,10 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo }) {
       throw new Error(`اختر الفريق وعالج الأخطاء وأكد استبدال القائمة`);
     setProgress(`تجهيز الرفع…`);
     const { id } = await request(`startImport`, { teamId: importTeam });
-    for (let i = 0; i < mapped.length; i += 200) {
-      await request(`importChunk`, { id, rows: mapped.slice(i, i + 200) });
+    for (let i = 0; i < mapped.length; i += 150) {
+      await request(`importChunk`, { id, rows: mapped.slice(i, i + 150) });
       setProgress(
-        `تم رفع ${Math.min(i + 200, mapped.length)} من ${mapped.length}`,
+        `تم رفع ${Math.min(i + 150, mapped.length)} من ${mapped.length}`,
       );
     }
     setProgress(`اعتماد القائمة…`);

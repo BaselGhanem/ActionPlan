@@ -14,5 +14,7 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Approved first generated direction: right blue sidebar, center customer directory, left allocation drawer; mobile cards and full-screen allocation.
 - 2027/USD; one account per team; shared customers matched by code; classification per team.
 - Admin alone manages roster uploads/users. Marketing Manager manages budgets/activity types/activities and reads all reports.
-- Never relax Firestore rules to bypass missing server deployment. All business mutations use the callable function and transactional budget checks.
+- Firebase Spark only: use the client Firestore SDK and tested Security Rules, with atomic activity + central finance + immutable audit writes. No Cloud Functions or external backend.
 - Monetary logic uses integer cents. Use template literals for JavaScript logic strings.
+
+- Rules validation supports up to 8 clients and 8 participating teams per activity; keep limits visible and consistent in UI and rules.

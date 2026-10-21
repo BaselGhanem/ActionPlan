@@ -20,7 +20,12 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: node --test functions/domain.test.js
+      - run: npm test
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm run test:firebase
       - run: npm run build
         env:
           GITHUB_PAGES: 'true'

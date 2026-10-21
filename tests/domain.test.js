@@ -6,7 +6,7 @@ import {
   weighted,
   validateActivity,
   charges,
-} from "./domain.js";
+} from "../src/data/domain.js";
 const valid = () => ({
   type: `ندوة`,
   status: `planned`,
