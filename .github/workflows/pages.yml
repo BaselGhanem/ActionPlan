@@ -29,6 +29,7 @@ jobs:
       - run: npm run build
         env:
           GITHUB_PAGES: 'true'
+      - run: npm run test:sites
       - run: cp dist/client/index.html dist/client/admin.html
       - uses: actions/configure-pages@v5
         with:

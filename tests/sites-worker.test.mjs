@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import worker from "../worker/index.js";
 
@@ -65,4 +65,14 @@ test("emits the files required by Sites packaging", async () => {
   await access(new URL("../dist/client/index.html", import.meta.url));
   await access(new URL("../dist/server/index.js", import.meta.url));
   await access(new URL("../dist/.openai/hosting.json", import.meta.url));
+});
+
+test("bundles styles within both entry pages to avoid 404 on CSS", async () => {
+  for (const page of [`index.html`, `admin.html`]) {
+    const content = await readFile(new URL(`../dist/client/${page}`, import.meta.url), `utf8`);
+    assert.match(content, /<style data-actionplan-css="bundled">/);
+    assert.match(content, /\.filter-bar|\.sidebar|\.app/);
+    assert.doesNotMatch(content, /<link[^>]*rel=["']stylesheet["'][^>]*href=["'][^"']*assets\//i);
+    assert.match(content, /<script type="module" crossorigin src="[^"]*\/assets\/index-[^"]+\.js"><\/script>/);
+  }
 });
