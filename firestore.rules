@@ -145,6 +145,32 @@ service cloud.firestore {
    return admin() && m.kind in ['startImport','importChunk','finishImport'] && m.uid == request.auth.uid && m.at == request.time && n.rosterEpoch == old.get('rosterEpoch',0)+1 &&
     n.diff(old).affectedKeys().hasOnly(['teams','mutation','rosterEpoch','pausedTeams','uploads']) && n.teams.keys().toSet() == old.teams.keys().toSet() && n.teams.diff(old.teams).affectedKeys().hasOnly([t]) && sameTeamExcept(t,['roster']);
   }
+  function archiveFinance(){
+   let n=request.resource.data;
+   let old=resource.data;
+   let m=n.mutation;
+   let auditPath=/databases/$(database)/documents/audit/$(m.batchId);
+   return admin() && m.kind == 'archiveCustomers' && m.uid == request.auth.uid && m.at == request.time &&
+    m.codes is list && m.codes.size() > 0 && m.codes.size() <= 10 &&
+    m.codes.toSet().size() == m.codes.size() && m.count == m.codes.size() &&
+    n.diff(old).affectedKeys().hasOnly(['rosterEpoch','mutation']) &&
+    n.get('rosterEpoch',0) == old.get('rosterEpoch',0)+1 &&
+    old.get('pausedTeams',[]).size() == 0 && old.get('uploads',{}).keys().size() == 0 &&
+    getAfter(auditPath).data.kind == 'archiveCustomers' &&
+    getAfter(auditPath).data.uid == request.auth.uid &&
+    getAfter(auditPath).data.at == request.time &&
+    getAfter(auditPath).data.after == {'codes':m.codes,'count':m.count};
+  }
+  function archiveCustomer(code){
+   let m=fAfter().mutation;
+   let n=request.resource.data;
+   return admin() && m.kind == 'archiveCustomers' && m.uid == request.auth.uid &&
+    m.codes.hasAny([code]) && resource.data.get('deleted',false) != true &&
+    n.diff(resource.data).affectedKeys().hasOnly(['deleted','visitingTeams','visits','archivedBy','archivedAt','updatedAt']) &&
+    n.deleted == true && n.visitingTeams == [] && n.visits == {} &&
+    n.archivedBy == request.auth.uid && n.archivedAt == request.time && n.updatedAt == request.time &&
+    fAfter().rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1;
+  }
   function commitActivity(a,old,activityId) {
    let f=fAfter();
    return active() && a.updatedAt == request.time && a.editedBy == request.auth.uid &&
@@ -174,7 +200,7 @@ service cloud.firestore {
   match /finance/2027 {
    allow read: if active();
    allow create: if admin() && request.resource.data.keys().hasOnly(['teams','types','mutation','pausedTeams','rosterEpoch','uploads']) && request.resource.data.teams == {} && request.resource.data.types is list && request.resource.data.mutation == null;
-   allow update: if (request.resource.data.mutation.kind in ['saveActivity','deleteActivity'] && activityFinance()) || metadataFinance() || importFinance();
+   allow update: if (request.resource.data.mutation.kind in ['saveActivity','deleteActivity'] && activityFinance()) || metadataFinance() || importFinance() || archiveFinance();
   }
   match /activities/{activityId} {
    allow read: if active();
@@ -184,7 +210,15 @@ service cloud.firestore {
       (manager() || resource.data.creator == principal()) && request.resource.data.rev == resource.data.rev+1 && request.resource.data.editedBy == request.auth.uid && request.resource.data.updatedAt == request.time && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','rev','editedBy','updatedAt']))) && receipt(request.resource.data,activityId,resource.data);
    allow delete: if false;
   }
-  match /customers/{code} { allow read: if active(); allow write: if admin() && fAfter().rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1; }
+  match /customers/{code} {
+    allow read: if active();
+    allow create: if admin() && fAfter().mutation.kind == 'importChunk' &&
+     fAfter().rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1;
+    allow update: if (admin() && fAfter().mutation.kind == 'importChunk' &&
+     fAfter().rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1)
+     || archiveCustomer(code);
+    allow delete: if false;
+   }
   match /imports/{id} { allow read,write: if admin(); match /rows/{row} { allow read,write: if admin(); } }
   match /audit/{id} {
    allow read: if manager();

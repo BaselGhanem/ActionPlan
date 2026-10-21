@@ -45,7 +45,7 @@ async function load(){const p=await profile();let f=await getDoc(financeRef);if(
  fail(f.exists(),`يجب أن يدخل Admin أولا لتهيئة ميزانيات 2027`);
  const financial=f.data(),teams=Object.entries(financial.teams).map(([id,t])=>({id,...t,uploading:financial.pausedTeams?.includes(id)||false}));
  const [c,a,u]=await Promise.all([getDocs(collection(db,`customers`)),getDocs(query(collection(db,`activities`),where(`year`,`==`,2027))),p.role===`admin`?getDocs(collection(db,`users`)):null]);
- const customers=list(c),rosters=teams.map(t=>({teamId:t.id,rows:customers.flatMap(c=>{const v=activeVisit(c,t.id,financial.teams);return v?[{...c,classification:v.classification}]:[]})}));
+ const customers=list(c).filter(c=>c.deleted!==true),rosters=teams.map(t=>({teamId:t.id,rows:customers.flatMap(c=>{const v=activeVisit(c,t.id,financial.teams);return v?[{...c,classification:v.classification}]:[]})}));
  return {profile:p,teams,customers,rosters,activities:list(a).filter(a=>a.status!==`deleted`).map(a=>decodeActivity(a.id,a,teams)),settings:{types:financial.types},users:u?list(u).filter(u=>u.current!==false):[]};}
 async function saveActivity(payload,deleting=false){const p=await profile(),activityId=payload.id||id(),r=doc(db,`activities/${activityId}`);
  const [initialFinance,initialActivity]=await Promise.all([getDoc(financeRef),getDoc(r)]);
@@ -83,7 +83,39 @@ async function provision(payload,replaceId=null){const p=await profile();admin(p
  tx.set(doc(db,`users/${created.uid}`),user);tx.set(doc(db,`logins/${username}`),{uid:created.uid,email,accountId});tx.set(doc(db,`accounts/${accountId}`),{uid:created.uid,active:user.active,username,role,teamId:user.teamId});event(tx,replaceId?`resetPassword`:`createUser`,replaceId?{uid:replaceId}:null,{uid:created.uid,username,role});});
  }catch(e){if(created)try{await deleteUser(created)}catch{}throw e;}finally{await signOut(secondaryAuth);}}
 async function updateUser(payload){if(payload.password)return provision(payload,payload.id);const p=await profile();admin(p);fail(payload.id!==uid(),`لا يمكنك تعطيل حسابك`);await runTransaction(db,async tx=>{const ur=doc(db,`users/${payload.id}`),[u,f]=await Promise.all([tx.get(ur),tx.get(financeRef)]);fail(u.exists(),`الحساب غير موجود`);const old=u.data();if(payload.active&&old.role===`team`)fail(f.data().teams[old.teamId]?.accountId===old.accountId,`يوجد حساب آخر لهذا الفريق`);tx.update(ur,{active:Boolean(payload.active)});tx.set(doc(db,`accounts/${old.accountId}`),{uid:payload.id,active:Boolean(payload.active),username:old.username,role:old.role,teamId:old.teamId});event(tx,`updateUser`,{uid:payload.id,active:old.active},{uid:payload.id,active:Boolean(payload.active)});});}
-export async function request(op,payload={}){if(op===`load`)return load();if(op===`saveActivity`)return saveActivity(payload);if(op===`deleteActivity`)return saveActivity(payload,true);if(op===`saveTeam`)return saveTeam(payload);if(op===`createUser`)return provision(payload);if(op===`updateUser`)return updateUser(payload);
+
+async function archiveCustomers(payload){
+ const p=await profile();admin(p);
+ const rows=payload?.rows;
+ fail(Array.isArray(rows)&&rows.length>0&&rows.length<=10,`الحذف يتم على دفعات حتى 10 عملاء`);
+ const codes=rows.map(x=>String(x.code||``).trim()),ids=codes.map(x=>encodeURIComponent(x));
+ fail(codes.every(x=>x&&!x.includes(`/`))&&new Set(codes).size===codes.length,`كود العميل المطلوب حذفه غير صحيح`);
+ const refs=ids.map(k=>doc(db,`customers/${k}`)),batchId=id(),actor=uid();
+ await runTransaction(db,async tx=>{
+  const fs=await tx.get(financeRef);
+  fail(fs.exists(),`لم تتم تهيئة الميزانيات`);
+  const finance=fs.data();
+  fail(!(finance.pausedTeams||[]).length&&!Object.keys(finance.uploads||{}).length,`يوجد رفع قائمة قيد التنفيذ؛ أكمل الرفع قبل الحذف`);
+  const snapshots=await Promise.all(refs.map(ref=>tx.get(ref))),before=[];
+  for(let i=0;i<snapshots.length;i++){
+   const s=snapshots[i],expected=rows[i];
+   fail(s.exists()&&s.data().deleted!==true,`العميل ${codes[i]} غير موجود أو محذوف؛ حدث الصفحة`);
+   const c=s.data();
+   fail(c.name===expected.name&&(c.specialty||``)===(expected.specialty||``)&&(c.area||``)===(expected.area||``),
+     `تغيرت بيانات العميل ${codes[i]} بعد المعاينة. حدّث الصفحة وأعد التحديد`);
+   before.push({code:c.code,name:c.name,specialty:c.specialty||``,area:c.area||``});
+  }
+  tx.update(financeRef,{rosterEpoch:(finance.rosterEpoch||0)+1,
+   mutation:{kind:`archiveCustomers`,uid:actor,at:serverTimestamp(),batchId,codes:ids,count:ids.length}});
+  for(const ref of refs)tx.update(ref,{
+   deleted:true,visits:{},visitingTeams:[],archivedBy:actor,archivedAt:serverTimestamp(),updatedAt:serverTimestamp(),
+  });
+  event(tx,`archiveCustomers`,{customers:before},{codes:ids,count:ids.length},batchId);
+ });
+ return {count:codes.length};
+}
+
+export async function request(op,payload={}){if(op===`load`)return load();if(op===`archiveCustomers`)return archiveCustomers(payload);if(op===`saveActivity`)return saveActivity(payload);if(op===`deleteActivity`)return saveActivity(payload,true);if(op===`saveTeam`)return saveTeam(payload);if(op===`createUser`)return provision(payload);if(op===`updateUser`)return updateUser(payload);
  const p=await profile();
  if(op===`saveTypes`){manager(p);const types=[...new Set(payload.types.map(t=>clean(t)).filter(Boolean))];fail(types.length>0&&types.length<=200,`أدخل من نوع إلى 200 نوع`);await runTransaction(db,async tx=>{const f=await tx.get(financeRef);tx.update(financeRef,{types,mutation:{kind:`saveTypes`,uid:uid(),at:serverTimestamp()}});event(tx,`saveTypes`,{types:f.data().types},{types});});return {};}
  if(op===`audit`){manager(p);const s=await getDocs(query(collection(db,`audit`),orderBy(`at`,`desc`),limit(100)));return {rows:list(s).map(r=>({...r,action:r.kind,at:r.at?{_seconds:r.at.seconds}:null}))};}
@@ -95,4 +127,4 @@ export async function request(op,payload={}){if(op===`load`)return load();if(op=
  throw new Error(`عملية غير معروفة`);
 }
 
-async function updateRosterChunk(importId,rows,remove){const r=doc(db,`imports/${importId}`),refs=rows.map(c=>doc(db,`customers/${encodeURIComponent(c.code)}`));await runTransaction(db,async tx=>{const [imp,fs,...existing]=await Promise.all([tx.get(r),tx.get(financeRef),...refs.map(ref=>tx.get(ref))]);const f=fs.data(),tid=imp.data()?.teamId;fail(imp.data()?.state===`staging`&&f.uploads?.[tid]===importId,`بدأ رفع أحدث لهذا الفريق، أعد رفع الملف`);for(let i=0;i<rows.length;i++){const raw=rows[i],old=existing[i].data()||{},visits={...(old.visits||{})},members=new Set(old.visitingTeams||[]);let next;if(remove){members.delete(tid);delete visits[tid];next={...old,visits,visitingTeams:[...members],updatedAt:serverTimestamp()};}else{const c=Object.fromEntries([`code`,`name`,`kind`,`area`,`specialty`].map(k=>[k,clean(raw[k],k===`code`?100:200)]));fail(c.code&&c.name&&!c.code.includes(`/`),`كود العميل واسمه إلزاميان`);members.add(tid);visits[tid]={classification:clean(raw.classification),roster:importId};next={...c,kind:c.kind||`طبيب`,visits,visitingTeams:[...members],updatedAt:serverTimestamp()};tx.set(doc(db,`imports/${importId}/rows/${encodeURIComponent(c.code)}`),{...c,classification:clean(raw.classification)});}tx.set(refs[i],next);}tx.update(financeRef,{rosterEpoch:(f.rosterEpoch||0)+1,mutation:{kind:`importChunk`,teamId:tid,uid:uid(),at:serverTimestamp()}});});}
+async function updateRosterChunk(importId,rows,remove){const r=doc(db,`imports/${importId}`),refs=rows.map(c=>doc(db,`customers/${encodeURIComponent(c.code)}`));await runTransaction(db,async tx=>{const [imp,fs,...existing]=await Promise.all([tx.get(r),tx.get(financeRef),...refs.map(ref=>tx.get(ref))]);const f=fs.data(),tid=imp.data()?.teamId;fail(imp.data()?.state===`staging`&&f.uploads?.[tid]===importId,`بدأ رفع أحدث لهذا الفريق، أعد رفع الملف`);for(let i=0;i<rows.length;i++){const raw=rows[i],old=existing[i].data()||{},visits={...(old.visits||{})},members=new Set(old.visitingTeams||[]);let next;if(remove){members.delete(tid);delete visits[tid];next={...old,visits,visitingTeams:[...members],updatedAt:serverTimestamp()};}else{const c=Object.fromEntries([`code`,`name`,`kind`,`area`,`specialty`].map(k=>[k,clean(raw[k],k===`code`?100:200)]));fail(c.code&&c.name&&!c.code.includes(`/`),`كود العميل واسمه إلزاميان`);members.add(tid);visits[tid]={classification:clean(raw.classification),roster:importId};next={...c,kind:c.kind||`طبيب`,deleted:false,visits,visitingTeams:[...members],updatedAt:serverTimestamp()};tx.set(doc(db,`imports/${importId}/rows/${encodeURIComponent(c.code)}`),{...c,classification:clean(raw.classification)});}tx.set(refs[i],next);}tx.update(financeRef,{rosterEpoch:(f.rosterEpoch||0)+1,mutation:{kind:`importChunk`,teamId:tid,uid:uid(),at:serverTimestamp()}});});}
