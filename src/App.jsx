@@ -40,6 +40,8 @@ import { auth, request, resolveLogin } from "./firebase";
 import { EMPTY_SPECIALTY, directoryKeys, reportKeys, matchingRows, facetOptions, selectedOptions } from "./data/cascading-filters";
 import { activityCountsByCustomer, isDoctorClient, hasCustomerActivity } from "./data/activity-presence";
 import { groupBySpecialty } from "./data/specialty-report";
+import { TeamActivityDialog } from "./components/TeamActivityDialog";
+import { ActualTracking } from "./components/ActualTracking";
 import { demoData } from "./demo";
 import {
   equally,
@@ -65,6 +67,7 @@ const routes = [
   { id: `dashboard`, title: `لوحة التحكم`, icon: House },
   { id: `distribution`, title: `العملاء / توزيع الأنشطة`, icon: Users },
   { id: `activities`, title: `الأنشطة`, icon: CalendarBlank },
+  { id: `actuals`, title: `الفعلي والمتابعة`, icon: CheckCircle },
   { id: `reports`, title: `التقارير`, icon: ChartBar },
   { id: `admin`, title: `الإدارة`, icon: Gear },
 ];
@@ -79,6 +82,7 @@ const defaultDraft = () => ({
   date: ``,
   notes: ``,
   clients: [],
+  teamShares: [],
 });
 /** A single activity indicator used wherever the doctor is named. */
 function ClientName({ client, activityCounts, customerKinds }) {
@@ -421,129 +425,26 @@ export function App() {
     });
   }
   function selectClient(c) {
-    const current = draft || defaultDraft();
-    if (current.clients.some((x) => x.code === c.code)) {
-      setDraft({
-        ...current,
-        clients: current.clients.filter((x) => x.code !== c.code),
-      });
+    const current=draft||defaultDraft();
+    if(current.clients.some(x=>x.code===c.code)){
+      setDraft({...current,clients:current.clients.filter(x=>x.code!==c.code)});
       return;
     }
-    if (!manager && !rosterMap.get(data.profile.teamId)?.has(c.code)) {
+    if(!manager&&!rosterMap.get(data.profile.teamId)?.has(c.code)){
       notify(`يمكنك استعراض العميل، لكن إنشاء النشاط متاح لعملاء فريقك فقط`);
       return;
     }
     if(current.clients.length>=8){notify(`النشاط الواحد يدعم حتى 8 عملاء`);return;}
-    const myTeam = eligible(c).find((t) => t.id === data.profile.teamId),
-      newClient = {
-        ...c,
-        amount: current.clients.length ? 0 : current.total,
-        actual: null,
-        shares: myTeam
-          ? [
-              {
-                teamId: myTeam.id,
-                teamName: myTeam.name,
-                amount: current.total,
-                actual: null,
-              },
-            ]
-          : [],
-      };
-    setDraft({ ...current, clients: [...current.clients, newClient] });
-  }
-  function updateClient(code, update) {
-    setDraft((d) => ({
-      ...d,
-      clients: d.clients.map((c) =>
-        c.code === code ? { ...c, ...update } : c,
-      ),
-    }));
-  }
-  function setTotal(value) {
-    try {
-      const n = inputMoney(value) ?? 0;
-      setDraft((d) => ({
-        ...d,
-        total: n,
-        clients:
-          d.clients.length === 1
-            ? d.clients.map((c) => ({
-                ...c,
-                amount: n,
-                shares: c.shares.map((s, i) => ({
-                  ...s,
-                  amount: equally(n, c.shares.length)[i],
-                })),
-              }))
-            : d.clients,
-      }));
-    } catch (e) {
-      notify(e.message);
+    let teamShares=current.teamShares||[];
+    if(!manager){
+      const team=data.teams.find(t=>t.id===data.profile.teamId);
+      if(team&&!teamShares.some(s=>s.teamId===team.id)){
+        const next=[...teamShares,{teamId:team.id,teamName:team.name,amount:0,actual:current.actual===null?null:0}];
+        const amounts=equally(current.total,next.length);
+        teamShares=next.map((s,i)=>({...s,amount:amounts[i]}));
+      }
     }
-  }
-  function distribute(code) {
-    setDraft((d) => ({
-      ...d,
-      clients: d.clients.map((c) =>
-        !code || c.code === code
-          ? {
-              ...c,
-              shares: c.shares.map((s, i) => ({
-                ...s,
-                amount: equally(c.amount, c.shares.length)[i],
-              })),
-            }
-          : c,
-      ),
-    }));
-  }
-  function toggleTeam(c, t) {
-    const shares = c.shares.some((s) => s.teamId === t.id)
-      ? c.shares.filter((s) => s.teamId !== t.id)
-      : [
-          ...c.shares,
-          { teamId: t.id, teamName: t.name, amount: 0, actual: null },
-        ];
-    const amounts = equally(c.amount, shares.length);
-    updateClient(c.code, {
-      shares: shares.map((s, i) => ({ ...s, amount: amounts[i] })),
-    });
-  }
-  function setActual(value) {
-    try {
-      const n = inputMoney(value);
-      setDraft((d) => {
-        const amounts =
-          n === null
-            ? d.clients.map(() => null)
-            : weighted(
-                n,
-                d.clients.map((c) => c.amount),
-              );
-        return {
-          ...d,
-          actual: n,
-          clients: d.clients.map((c, i) => {
-            const a = amounts[i],
-              shares =
-                a === null
-                  ? c.shares.map(() => null)
-                  : weighted(
-                      a,
-                      c.shares.map((s) => s.amount),
-                    );
-            return {
-              ...c,
-              actual: a,
-              shares: c.shares.map((s, j) => ({ ...s, actual: shares[j] })),
-            };
-          }),
-        };
-      });
-    } catch (e) {
-      notify(e.message);
-    }
+    setDraft({...current,clients:[...current.clients,{code:c.code,name:c.name,kind:c.kind||``,specialty:c.specialty||``,area:c.area||``}],teamShares});
   }
   async function perform(op, payload, message) {
     if (isDemo) {
@@ -590,34 +491,36 @@ export function App() {
     await reload();
     notify(message, `success`);
   }
-  async function saveActivity() {
-    try {
-      validateActivity(draft);
-      const old = data.activities.find((a) => a.id === draft.id),
-        before = charges(old),
-        after = charges(draft);
-      for (const t of data.teams)
-        if (
-          t.used - (before[t.id] || 0) + (after[t.id] || 0) > t.budget ||
-          (draft.actual !== null &&
-            t.used -
-              (before[t.id] || 0) +
-              (charges({ ...draft, status: `executed` })[t.id] || 0) >
-              t.budget)
-        )
-          throw new Error(`ميزانية ${t.name} لا تكفي، يجب زيادتها أولا`);
+  function toTeamDraft(activity){
+    return {
+      ...structuredClone(activity),
+      clients:activity.clients.map(c=>({
+        code:c.code,name:c.name,kind:c.kind||``,specialty:c.specialty||``,area:c.area||``,
+      })),
+      teamShares:structuredClone(activity.teamShares||[]),
+    };
+  }
+  async function persistActivity(value,closeDialog=false) {
+    try{
+      validateActivity(value);
+      const old=data.activities.find(a=>a.id===value.id);
+      const before=charges(old),after=charges(value);
+      for(const t of data.teams){
+        if(t.used-(before[t.id]||0)+(after[t.id]||0)>t.budget||
+          (value.actual!==null && t.used-(before[t.id]||0)+
+           (charges({...value,status:`executed`})[t.id]||0)>t.budget))
+          throw new Error(`ميزانية ${t.name} لا تكفي؛ يرجى تعديل ميزانية الفريق`);
+      }
       setBusy(true);
-      await perform(`saveActivity`, draft, `تم حفظ النشاط وتحديث الميزانيات`);
-      setDraft(null);
-    } catch (e) {
+      await perform(`saveActivity`,value,`تم حفظ النشاط وتحديث الميزانيات`);
+      if(closeDialog)setDraft(null);
+    }catch(e){
       notify(e.message);
-    } finally {
-      setBusy(false);
-    }
+      throw e;
+    }finally{setBusy(false);}
   }
-  function openActivity(a) {
-    setDraft(structuredClone(a));
-  }
+  function openActivity(activity){setDraft(toTeamDraft(activity));}
+  const canEditActivity=activity=>Boolean(manager||activity.creator===(data?.profile.accountId||user?.uid));
   async function exportExcel() {
     setBusy(true);
     try {
@@ -676,7 +579,7 @@ export function App() {
   const oldDraft = data.activities.find((a) => a.id === draft?.id),
     canEdit = draft && (manager || !draft.id || draft.creator === (data.profile.accountId || user.uid));
   return (
-    <div className={`app ${draft ? `has-drawer` : ``}`}>
+    <div className="app">
       <aside className={`sidebar ${nav ? `mobile-open` : ``}`}>
         <div className="brand">
           Dar Al Dawa<span>تخطيط الأنشطة الطبية</span>
@@ -994,6 +897,11 @@ export function App() {
           {page === `activities` && (
             <Activities data={data} onOpen={openActivity} activityCounts={activityCounts} customerKinds={customerKinds} />
           )}
+          {page === `actuals` && (
+            <ActualTracking data={data} busy={busy} onOpen={openActivity}
+              canEditActivity={canEditActivity}
+              onSave={value=>persistActivity(value,false)} />
+          )}
           {page === `reports` && (
             <Reports data={data} exportExcel={exportExcel} busy={busy} activityCounts={activityCounts} customerKinds={customerKinds} />
           )}
@@ -1012,403 +920,30 @@ export function App() {
         </main>
       </div>
       {draft && (
-        <>
-          <div className="drawer-backdrop" onClick={() => setDraft(null)} />
-          <aside className="allocation-panel">
-            <div className="drawer-title">
-              <h2>{draft.id ? `تفاصيل النشاط` : `توزيع النشاط`}</h2>
-              <button
-                className="icon-button"
-                onClick={() => setDraft(null)}
-                aria-label="إغلاق النموذج"
-              >
-                <X size={23} />
-              </button>
-            </div>
-            <div className="drawer-scroll">
-              <fieldset disabled={!canEdit || busy}>
-                <div className="selected-summary">
-                  <span className="eyebrow">
-                    {draft.clients.length === 1
-                      ? `العميل المختار`
-                      : `نشاط جماعي • ${draft.clients.length} عملاء`}
-                  </span>
-                  {draft.clients.length === 1 ? (
-                    <>
-                      <h3><ClientName client={draft.clients[0]} activityCounts={activityCounts} customerKinds={customerKinds} /></h3>
-                      <span className="code-chip">{draft.clients[0].code}</span>
-                      <p>
-                        <Stethoscope size={16} />
-                        {draft.clients[0].specialty || `غير محدد`}
-                      </p>
-                      <p>
-                        <MapPin size={16} />
-                        {draft.clients[0].area || `غير محدد`}
-                      </p>
-                    </>
-                  ) : (
-                    <p>حصة مستقلة لكل عميل، ثم توزيعها على فرقه • حتى 8 عملاء و8 فرق</p>
-                  )}
-                </div>
-                <button
-                  className="text-button add-client-button"
-                  onClick={() => {
-                    setPickerSearch(``);
-                    setPicker(true);
-                  }}
-                  type="button"
-                >
-                  <Plus size={17} />
-                  إضافة عميل آخر للنشاط
-                </button>
-                <Field label="نوع النشاط">
-                  <select
-                    value={draft.type}
-                    onChange={(e) =>
-                      setDraft((d) => ({ ...d, type: e.target.value }))
-                    }
-                  >
-                    <option value="">اختر نوع النشاط</option>
-                    {[
-                      ...new Set([
-                        ...data.settings.types,
-                        ...(draft.type ? [draft.type] : []),
-                      ]),
-                    ].map((t) => (
-                      <option key={t}>{t}</option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="الميزانية المخططة الإجمالية (USD)">
-                  <div className="money-input">
-                    <span>$</span>
-                    <AmountInput
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={draft.total / 100 || ``}
-                      onChange={(e) => setTotal(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </Field>
-                <div className="two-fields">
-                  <Field label="تاريخ النشاط (اختياري)">
-                    <input
-                      type="date"
-                      min="2027-01-01"
-                      max="2027-12-31"
-                      value={draft.date}
-                      onChange={(e) =>
-                        setDraft((d) => ({ ...d, date: e.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label="حالة النشاط">
-                    <select
-                      value={draft.status}
-                      onChange={(e) =>
-                        setDraft((d) => ({ ...d, status: e.target.value }))
-                      }
-                    >
-                      <option value="planned">مخطط</option>
-                      <option value="executed">منفذ</option>
-                      {manager && draft.id && (
-                        <option value="cancelled">ملغي</option>
-                      )}
-                    </select>
-                  </Field>
-                </div>
-                <button
-                  className="equal-button"
-                  onClick={() => distribute()}
-                  type="button"
-                >
-                  <SquaresFour size={20} />
-                  توزيع حصص العملاء بالتساوي على فرقهم
-                </button>
-                {draft.clients.map((c) => (
-                  <section className="client-allocation" key={c.code}>
-                    <div className="client-heading">
-                      <h3>
-                        {draft.clients.length > 1
-                          ? <ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} />
-                          : `الفرق الزائرة المشاركة`}
-                      </h3>
-                      {draft.clients.length > 1 && (
-                        <button
-                          className="icon-button"
-                          title="إزالة العميل"
-                          onClick={() =>
-                            setDraft((d) => ({
-                              ...d,
-                              clients: d.clients.filter(
-                                (x) => x.code !== c.code,
-                              ),
-                            }))
-                          }
-                        >
-                          <X size={17} />
-                        </button>
-                      )}
-                    </div>
-                    {draft.clients.length > 1 && (
-                      <Field label="حصة العميل من المخطط (USD)">
-                        <AmountInput
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={c.amount / 100 || ``}
-                          onChange={(e) => {
-                            try {
-                              const n = inputMoney(e.target.value) ?? 0;
-                              updateClient(c.code, {
-                                amount: n,
-                                shares: c.shares.map((s, i) => ({
-                                  ...s,
-                                  amount: equally(n, c.shares.length)[i],
-                                })),
-                              });
-                            } catch (e) {
-                              notify(e.message);
-                            }
-                          }}
-                        />
-                      </Field>
-                    )}
-                    <div className="team-checks">
-                      {[
-                        ...new Map(
-                          [
-                            ...eligible(c),
-                            ...c.shares
-                              .map((s) =>
-                                data.teams.find((t) => t.id === s.teamId),
-                              )
-                              .filter(Boolean),
-                          ].map((t) => [t.id, t]),
-                        ).values(),
-                      ].map((t) => (
-                        <label key={t.id} className="check-line">
-                          <Checkbox
-                            type="checkbox"
-                            checked={c.shares.some((s) => s.teamId === t.id)}
-                            onChange={() => toggleTeam(c, t)}
-                          />
-                          <span dir="auto">{t.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                    {!eligible(c).length && !c.shares.length && (
-                      <p className="warning-text">
-                        لا يوجد فريق يزور هذا العميل حاليا
-                      </p>
-                    )}
-                    {c.shares.map((s) => {
-                      const t = data.teams.find((t) => t.id === s.teamId);
-                      return (
-                        <div className="share-row" key={s.teamId}>
-                          <div>
-                            <b dir="auto">{t?.name || s.teamName}</b>
-                            <small>
-                              المتاح:{" "}
-                              <span dir="ltr">
-                                ${money((t?.budget || 0) - (t?.used || 0))}
-                              </span>
-                            </small>
-                          </div>
-                          <div className="money-input">
-                            <span>$</span>
-                            <AmountInput
-                              aria-label={`حصة ${t?.name} للعميل ${c.name}`}
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={s.amount / 100}
-                              onChange={(e) => {
-                                try {
-                                  const n = inputMoney(e.target.value) ?? 0;
-                                  updateClient(c.code, {
-                                    shares: c.shares.map((x) =>
-                                      x.teamId === s.teamId
-                                        ? { ...x, amount: n }
-                                        : x,
-                                    ),
-                                  });
-                                } catch (e) {
-                                  notify(e.message);
-                                }
-                              }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {draft.clients.length > 1 && (
-                      <button
-                        className="text-button"
-                        onClick={() => distribute(c.code)}
-                      >
-                        توزيع حصة هذا العميل بالتساوي
-                      </button>
-                    )}
-                    <div
-                      className={`balance-note ${c.shares.reduce((n, s) => n + s.amount, 0) !== c.amount ? `invalid` : ``}`}
-                    >
-                      <CheckCircle size={17} />
-                      فرق التوزيع:{" "}
-                      <AnimatedMoney
-                        value={
-                          c.amount - c.shares.reduce((n, s) => n + s.amount, 0)
-                        }
-                      />
-                    </div>
-                  </section>
-                ))}
-                {draft.clients.length > 1 && (
-                  <div
-                    className={`balance-note ${draft.clients.reduce((n, c) => n + c.amount, 0) !== draft.total ? `invalid` : ``}`}
-                  >
-                    فرق حصص العملاء:{" "}
-                    <span dir="ltr">
-                      $
-                      {money(
-                        draft.total -
-                          draft.clients.reduce((n, c) => n + c.amount, 0),
-                      )}
-                    </span>
-                  </div>
-                )}
-                <details
-                  className="actual-section"
-                  open={draft.actual !== null || draft.status === `executed`}
-                >
-                  <summary>المصروف الفعلي والمتابعة</summary>
-                  <p className="hint">
-                    يبقى المخطط محجوزا حتى إغلاق النشاط؛ ثم يحل الفعلي محله
-                  </p>
-                  <Field label="المبلغ الفعلي الإجمالي (USD)">
-                    <AmountInput
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={draft.actual === null ? `` : draft.actual / 100}
-                      onChange={(e) => setActual(e.target.value)}
-                    />
-                  </Field>
-                  {draft.actual !== null &&
-                    draft.clients.map((c) => (
-                      <div className="actual-client" key={c.code}>
-                        <b><ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} /></b>
-                        <Field label="حصة العميل الفعلية">
-                          <AmountInput
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={(c.actual || 0) / 100}
-                            onChange={(e) => {
-                              try {
-                                const n = inputMoney(e.target.value) ?? 0;
-                                const shares = weighted(
-                                  n,
-                                  c.shares.map((s) => s.amount),
-                                );
-                                updateClient(c.code, {
-                                  actual: n,
-                                  shares: c.shares.map((s, i) => ({
-                                    ...s,
-                                    actual: shares[i],
-                                  })),
-                                });
-                              } catch (e) {
-                                notify(e.message);
-                              }
-                            }}
-                          />
-                        </Field>
-                        {c.shares.map((s) => (
-                          <Field key={s.teamId} label={`فعلي ${s.teamName}`}>
-                            <AmountInput
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={(s.actual || 0) / 100}
-                              onChange={(e) => {
-                                try {
-                                  const n = inputMoney(e.target.value) ?? 0;
-                                  updateClient(c.code, {
-                                    shares: c.shares.map((x) =>
-                                      x.teamId === s.teamId
-                                        ? { ...x, actual: n }
-                                        : x,
-                                    ),
-                                  });
-                                } catch (e) {
-                                  notify(e.message);
-                                }
-                              }}
-                            />
-                          </Field>
-                        ))}
-                      </div>
-                    ))}
-                </details>
-                <Field label="ملاحظات">
-                  <textarea
-                    rows={3}
-                    maxLength={3000}
-                    value={draft.notes}
-                    onChange={(e) =>
-                      setDraft((d) => ({ ...d, notes: e.target.value }))
-                    }
-                  />
-                </Field>
-              </fieldset>
-            </div>
-            <footer className="drawer-footer">
-              {canEdit ? (
-                <>
-                  <button
-                    className="primary"
-                    onClick={saveActivity}
-                    disabled={busy || !draft.clients.length}
-                  >
-                    <FloppyDisk size={20} />
-                    {busy ? `جار الحفظ…` : `حفظ النشاط والتوزيع`}
-                  </button>
-                  {oldDraft &&
-                    oldDraft.actual === null &&
-                    oldDraft.status === `planned` && (
-                      <button
-                        className="danger-text"
-                        onClick={() =>
-                          setConfirm({
-                            title: `حذف النشاط نهائيا؟`,
-                            text: `ستعاد المبالغ المحجوزة للفرق، ويبقى أثر العملية في سجل التغييرات`,
-                            action: async () => {
-                              await perform(
-                                `deleteActivity`,
-                                { id: draft.id },
-                                `تم حذف النشاط وإعادة الميزانية`,
-                              );
-                              setDraft(null);
-                            },
-                          })
-                        }
-                      >
-                        <Trash size={16} />
-                        حذف النشاط
-                      </button>
-                    )}
-                </>
-              ) : (
-                <p className="hint">
-                  للقراءة فقط — التعديل لمنشئ النشاط والإدارة
-                </p>
-              )}
-            </footer>
-          </aside>
-        </>
+        <TeamActivityDialog
+          draft={draft}
+          setDraft={setDraft}
+          teams={data.teams}
+          types={data.settings.types}
+          eligible={eligible}
+          canEdit={Boolean(canEdit)}
+          canCancel={manager}
+          busy={busy}
+          onClose={()=>setDraft(null)}
+          onSave={()=>persistActivity(draft,true).catch(()=>{})}
+          onPick={()=>{setPickerSearch(``);setPicker(true);}}
+          renderName={c=><ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds}/>}
+          onDelete={oldDraft&&oldDraft.actual===null&&oldDraft.status===`planned`?()=>{
+            setConfirm({
+              title:`حذف النشاط؟`,
+              text:`سيُعاد المبلغ المحجوز للفرق، ويُحفظ أثر العملية في سجل التغييرات`,
+              action:async()=>{
+                await perform(`deleteActivity`,{id:draft.id},`تم حذف النشاط وإعادة المبالغ المحجوزة`);
+                setDraft(null);
+              },
+            });
+          }:null}
+        />
       )}
       {picker && (
         <div className="modal-backdrop">
