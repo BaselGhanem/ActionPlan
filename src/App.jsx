@@ -27,6 +27,7 @@ import {
   ArrowLeft,
   Check,
   FileXls,
+  Target,
 } from "@phosphor-icons/react";
 import {
   onAuthStateChanged,
@@ -43,6 +44,7 @@ import { groupBySpecialty } from "./data/specialty-report";
 import {withHonorariumParticipants} from "./data/cost-items";
 import { TeamActivityDialog } from "./components/TeamActivityDialog";
 import { ActualTracking } from "./components/ActualTracking";
+import { Standalone } from "./components/Standalone";
 import { demoData } from "./demo";
 import {
   equally,
@@ -68,6 +70,7 @@ const routes = [
   { id: `dashboard`, title: `لوحة التحكم`, icon: House },
   { id: `distribution`, title: `العملاء / توزيع الأنشطة`, icon: Users },
   { id: `activities`, title: `الأنشطة`, icon: CalendarBlank },
+  { id: `standalone`, title: `Stand Alone`, icon: Target },
   { id: `actuals`, title: `الفعلي والمتابعة`, icon: CheckCircle },
   { id: `reports`, title: `التقارير`, icon: ChartBar },
   { id: `admin`, title: `الإدارة`, icon: Gear },
@@ -905,6 +908,20 @@ export function App() {
           )}
           {page === `activities` && (
             <Activities data={data} onOpen={openActivity} activityCounts={activityCounts} customerKinds={customerKinds} />
+          )}
+          {page === `standalone` && (
+            <Standalone data={data} busy={busy}
+              onInit={async()=>{
+                try{setBusy(true);if(isDemo){notify("هذا وضع المعاينة", "success");return;}
+                  await request("standaloneInit");await reload();notify("تم تهيئة حصص Stand Alone", "success");
+                }catch(e){notify(e.message);}finally{setBusy(false);}
+              }}
+              onChoose={async item=>{
+                try{setBusy(true);if(isDemo){notify("هذا وضع المعاينة");return;}
+                  await request("standaloneChoose",item);await reload();notify("تم تحديث اختيار الطبيب", "success");
+                }catch(e){notify(e.message);}finally{setBusy(false);}
+              }}
+            />
           )}
           {page === `actuals` && (
             <ActualTracking data={data} busy={busy} onOpen={openActivity}

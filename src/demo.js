@@ -109,5 +109,6 @@ export function demoData() {
       ],
     },
     users: [],
+    standalone:{quotas:[],choices:[]},
   };
 }

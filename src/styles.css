@@ -1967,3 +1967,50 @@ tfoot td {
  .honorarium-doctor-amount{flex-basis:112px;}
  .honorarium-doctor-row{padding:8px;gap:8px;}
 }
+
+/* Stand Alone doctor-selection workflow */
+.standalone-page{display:grid;gap:17px;min-width:0;}
+.standalone-campaign-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+.standalone-campaign{background:white;border:1px solid #e0eaf2;border-radius:13px;padding:17px;min-width:0;display:grid;gap:8px;}
+.standalone-campaign>b{font-size:17px;color:#143c62}
+.standalone-campaign>small{font-size:11px;color:#71869b;}
+.standalone-campaign>div{display:flex;gap:7px;flex-wrap:wrap;}
+.standalone-campaign button{display:flex;align-items:center;gap:9px;border-radius:8px;background:#f2f7fa;border:1px solid #dce9ee;font-size:12px;padding:9px 12px;}
+.standalone-campaign button.active{background:#e2f6f1;border-color:#70c6bc;color:#086b69;font-weight:800;}
+.standalone-campaign button span{font-variant-numeric:tabular-nums;font-size:10px;color:#577b88;}
+.standalone-selector{display:grid;gap:15px;}
+.standalone-selected-title{display:flex;align-items:center;justify-content:space-between;gap:18px;}
+.standalone-selected-title h3{margin:0 0 5px;font-size:18px;}
+.standalone-selected-title p{color:#738899;font-size:12px;margin:0;}
+.standalone-quota{font-size:27px;color:#087e7d;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.standalone-quota small{font-size:13px;color:#8697a5;}
+.standalone-meter{height:9px;border-radius:99px;overflow:hidden;background:#e8f0f3;}
+.standalone-meter>div{height:100%;background:#099999;min-width:0;transition:width .2s;}
+.standalone-toolbar{display:flex;gap:16px;align-items:center;}
+.standalone-toolbar .search{flex:1;min-width:0;}
+.standalone-toolbar .check-line{white-space:nowrap;}
+.standalone-list{display:grid;gap:8px;max-height:480px;overflow-y:auto;overscroll-behavior:contain;}
+.standalone-doctor{padding:12px 15px;border:1px solid #e1eaf0;border-radius:10px;display:flex;gap:14px;align-items:center;justify-content:space-between;min-width:0;}
+.standalone-doctor.selected{background:#f0faf7;border-color:#aedbd2;}
+.standalone-doctor>div{min-width:0;display:grid;gap:5px;}
+.standalone-doctor b{font-size:13px;}
+.standalone-doctor small{font-size:11px;color:#73889a;overflow-wrap:anywhere;}
+.standalone-doctor button{white-space:nowrap;display:inline-flex;align-items:center;gap:5px;min-width:94px;justify-content:center;}
+.standalone-doctor button:disabled{opacity:.5;cursor:not-allowed;}
+.standalone-doctor .standalone-remove{background:#dff5ee;color:#17745f;border:1px solid #b4dfd1;}
+.standalone-notice{color:#995e18;background:#fff8e9;border:1px solid #f1dba8;padding:13px;border-radius:10px;}
+.standalone-empty{font-size:12px;color:#778a9a;padding:15px;margin:0;}
+.standalone-matching{display:grid;gap:14px;}
+.standalone-matching h3{display:flex;align-items:center;gap:10px;}
+.standalone-matching>p{color:#758797;font-size:12px;}
+.standalone-match-block{border:1px solid #e5edf3;border-radius:11px;padding:15px;display:grid;gap:10px;}
+.standalone-match-head{display:flex;gap:14px;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.standalone-match-head>b{color:#153b62;font-size:15px;}
+.standalone-match-head span{font-size:12px;color:#6d8296;}
+.standalone-match-stats{display:flex;gap:9px;flex-wrap:wrap;}
+.standalone-match-stats span{padding:8px 12px;border-radius:8px;background:#edf8f6;font-size:12px;}
+.standalone-matched-doctors{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:9px;}
+.standalone-matched-doctors>div{padding:10px;background:#f5f9fc;border-radius:8px;display:grid;gap:4px;}
+.standalone-matched-doctors small{font-size:10px;color:#77899c;}
+@media(max-width:790px){.standalone-campaign-tabs{grid-template-columns:1fr;}.standalone-toolbar{flex-direction:column;align-items:stretch;}.standalone-matching{padding:15px;}}
+@media(max-width:480px){.standalone-doctor{padding:10px;gap:7px;}.standalone-doctor button{min-width:70px;padding:9px 6px;font-size:11px;}.standalone-doctor b{font-size:12px;}}

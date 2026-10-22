@@ -16,7 +16,7 @@ export function Standalone({data,busy,onChoose,onInit}){
  const selectedCodes=new Set(myChoices.map(c=>c.code));
  const roster=new Set(data.rosters.find(r=>r.teamId===current?.teamId)?.rows.map(c=>c.code)||[]);
  const participants=data.customers.filter(c=>
-  current&&eligibleDoctor(current.id,{...c,visitingTeams:c.visitingTeams||[...roster].filter(()=>roster.has(c.code))},current.teamId)&&roster.has(c.code));
+  current&&eligibleDoctor(current.id,{...c,visitingTeams:c.visitingTeams||[current.teamId]},current.teamId)&&roster.has(c.code));
  const listed=participants.filter(c=>(!onlySelected||selectedCodes.has(c.code))&&
   (!search.trim()||[c.code,c.name,c.specialty,c.area].join(" ").toLocaleLowerCase().includes(search.toLocaleLowerCase().trim())))
   .sort((a,b)=>Number(selectedCodes.has(b.code))-Number(selectedCodes.has(a.code))||a.name.localeCompare(b.name,"ar"));
