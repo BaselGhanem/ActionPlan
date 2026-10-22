@@ -1,0 +1,89 @@
+import test,{before,after,beforeEach} from "node:test";
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import {initializeTestEnvironment,assertSucceeds,assertFails} from "@firebase/rules-unit-testing";
+import {doc,setDoc,updateDoc,getDoc,getDocs,deleteDoc,collection,query,where,runTransaction,serverTimestamp} from "firebase/firestore";
+let env;
+const db=(id)=>env.authenticatedContext(id).firestore();
+const quota=(d,group)=>doc(d,"standaloneQuotas/"+group);
+const choice=(d,group,code)=>doc(d,"standaloneChoices/"+group+"__"+code);
+const docData=(code,specialty,kind="طبيب")=>({code,name:"طبيب "+code,kind,specialty,area:"عمان",
+ visitingTeams:["A","M","U"],visits:{A:{roster:"rA",classification:"A"},M:{roster:"rM",classification:"B"},U:{roster:"rU",classification:"A"}}});
+const budget=(name,id)=>({name,budget:1000000,used:0,roster:"r"+id,accountId:id});
+const profile=(id,role,teamId=null)=>({name:id,username:id,role,accountId:id,teamId,active:true,current:true});
+before(async()=>{env=await initializeTestEnvironment({projectId:"demo-standalone-security",
+ firestore:{rules:await readFile(new URL("../firestore.rules",import.meta.url),"utf8")}});});
+after(async()=>{await env?.cleanup();});
+beforeEach(async()=>{
+ await env.clearFirestore();
+ await env.withSecurityRulesDisabled(async ctx=>{
+  const d=ctx.firestore();
+  await Promise.all([
+   setDoc(doc(d,"finance/2027"),{teams:{A:budget("Azord","A"),M:budget("Matador","M"),U:budget("URO","U")},types:["ندوة"],mutation:null}),
+   setDoc(doc(d,"users/admin"),profile("admin","admin")),
+   setDoc(doc(d,"users/a"),profile("a","team","A")),
+   setDoc(doc(d,"users/m"),profile("m","team","M")),
+   setDoc(doc(d,"users/u"),profile("u","team","U")),
+   setDoc(doc(d,"customers/C0"),docData("C0","ENT")),
+   setDoc(doc(d,"customers/C1"),docData("C1","Chest")),
+   setDoc(doc(d,"customers/C2"),docData("C2","Urology")),
+   setDoc(doc(d,"customers/C3"),docData("C3","ENT","صيدلية")),
+  ]);
+ });
+});
+const bootstrap=async()=>{
+ const d=db("admin");
+ for(const [campaign,t,limit] of [["ent-chest","A",35],["ent-chest","M",35],["uro","M",25],["uro","U",25]])
+  await assertSucceeds(setDoc(quota(d,campaign+"__"+t),{campaign,teamId:t,limit,count:0}));
+};
+async function toggle(identity,campaign,teamId,code,selected=true){
+ const d=db(identity),group=campaign+"__"+teamId,ref=quota(d,group),c=choice(d,group,code);
+ return runTransaction(d,async tx=>{
+  const [current,old]=await Promise.all([tx.get(ref),tx.get(c)]);
+  assert.ok(current.exists());
+  if(selected===old.exists())return;
+  const choiceId=group+"__"+code;
+  if(selected)tx.set(c,{campaign,teamId,code,actor:identity,at:serverTimestamp()});
+  else tx.delete(c);
+  tx.update(ref,{count:current.data().count+(selected?1:-1),mutation:{
+   kind:selected?"add":"remove",choiceId,actor:identity,at:serverTimestamp()
+  }});
+ });
+}
+test("only admin can initialize a quota, no other team can list or fetch another team's choices",async()=>{
+ await assertFails(setDoc(quota(db("a"),"ent-chest__A"),{campaign:"ent-chest",teamId:"A",limit:35,count:0}));
+ await bootstrap();
+ assert.equal((await getDoc(quota(db("a"),"ent-chest__A"))).data().limit,35);
+ await assertFails(getDoc(quota(db("a"),"ent-chest__M")));
+ await assertFails(getDocs(collection(db("a"),"standaloneQuotas")));
+ const own=await assertSucceeds(getDocs(query(collection(db("a"),"standaloneQuotas"),where("teamId","==","A"))));
+ assert.equal(own.docs.length,1);
+});
+test("Azord and Matador can select same ENT doctor without exposing each other's selections",async()=>{
+ await bootstrap();
+ await assertSucceeds(toggle("a","ent-chest","A","C0"));
+ await assertSucceeds(toggle("m","ent-chest","M","C0"));
+ assert.equal((await getDoc(quota(db("a"),"ent-chest__A"))).data().count,1);
+ assert.equal((await getDoc(quota(db("m"),"ent-chest__M"))).data().count,1);
+ const owned=await assertSucceeds(getDocs(query(collection(db("a"),"standaloneChoices"),where("teamId","==","A"))));
+ assert.equal(owned.size,1);
+ await assertFails(getDoc(choice(db("a"),"ent-chest__M","C0")));
+ await assertFails(getDocs(collection(db("a"),"standaloneChoices")));
+ const all=await assertSucceeds(getDocs(collection(db("admin"),"standaloneChoices")));
+ assert.equal(all.size,2);
+ await assertSucceeds(toggle("a","ent-chest","A","C0",false));
+ assert.equal((await getDoc(quota(db("a"),"ent-chest__A"))).data().count,0);
+});
+test("specialty, type, team, quota, direct writes are guarded at Firestore level",async()=>{
+ await bootstrap();
+ await assertFails(toggle("a","ent-chest","A","C2"));
+ await assertFails(toggle("a","ent-chest","A","C3"));
+ await assertFails(toggle("a","ent-chest","M","C0"));
+ await assertFails(toggle("u","ent-chest","U","C0"));
+ await assertSucceeds(toggle("u","uro","U","C2"));
+ await assertFails(toggle("u","uro","U","C0"));
+ await assertFails(setDoc(choice(db("a"),"ent-chest__A","C0"),{campaign:"ent-chest",teamId:"A",code:"C0",actor:"a",at:serverTimestamp()}));
+ await assertFails(updateDoc(quota(db("a"),"ent-chest__A"),{count:35}));
+ await env.withSecurityRulesDisabled(async ctx=>{await updateDoc(quota(ctx.firestore(),"ent-chest__A"),{count:35});});
+ await assertFails(toggle("a","ent-chest","A","C0"));
+});
