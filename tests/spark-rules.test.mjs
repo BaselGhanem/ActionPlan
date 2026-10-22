@@ -207,3 +207,19 @@ test("optional per-doctor Honorarium share is saved and reconciled separately fr
 test("direct forged cost-proof cannot bypass the activity proposal",async()=>{
  await assertFails(setDoc(doc(db(),"proposals/does-not-exist/checks/costs"),{ok:true}));
 });
+
+test("restricted origin team may still fund another team sharing the same doctor",async()=>{
+ await env.withSecurityRulesDisabled(async c=>{
+  await setDoc(doc(c.firestore(),"teamVisibility/t0"),{showOtherTeams:false,updatedAt:Date.now(),updatedBy:"admin"});
+ });
+ const input={
+  type:"ندوة",total:15000,actual:null,status:"planned",date:"2027-03-05",notes:"",
+  clients:[{code:"C0",name:"طبيب 0",kind:"طبيب",specialty:"قلب",area:"عمان"}],
+  teamShares:[{teamId:"t0",amount:5000,actual:null},{teamId:"t1",amount:10000,actual:null}],
+ };
+ await assertSucceeds(persist(db(),"shared-restricted",input));
+ const written=(await getDoc(doc(db(),"activities/shared-restricted"))).data();
+ assert.equal(written.total,15000);
+ assert.equal(written.totals.t1,10000);
+ assert.equal((await getDoc(doc(db("u2"),"activities/shared-restricted"))).data().totals.t1,10000);
+});
