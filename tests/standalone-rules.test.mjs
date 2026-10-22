@@ -87,3 +87,36 @@ test("specialty, type, team, quota, direct writes are guarded at Firestore level
  await env.withSecurityRulesDisabled(async ctx=>{await updateDoc(quota(ctx.firestore(),"ent-chest__A"),{count:35});});
  await assertFails(toggle("a","ent-chest","A","C0"));
 });
+
+test("admin can independently restrict one team; Firestore blocks unrelated customers and activities",async()=>{
+ const admin=db("admin"),azord=db("a"),matador=db("m");
+ await assertSucceeds(setDoc(doc(admin,"teamVisibility/A"),{showOtherTeams:false,updatedBy:"admin",updatedAt:serverTimestamp()}));
+ assert.equal((await getDoc(doc(azord,"teamVisibility/A"))).data().showOtherTeams,false);
+ await assertFails(getDoc(doc(matador,"teamVisibility/A")));
+ await assertFails(setDoc(doc(azord,"teamVisibility/A"),{showOtherTeams:true,updatedBy:"a",updatedAt:serverTimestamp()}));
+ await env.withSecurityRulesDisabled(async ctx=>{
+  const d=ctx.firestore();
+  await setDoc(doc(d,"customers/F0"),{...docData("F0","ENT"),visitingTeams:["M"],visits:{M:{roster:"rM",classification:"B"}}});
+  await setDoc(doc(d,"activities/only-m"),{year:2027,status:"planned",teamIds:["M"]});
+  await setDoc(doc(d,"activities/shared-a-m"),{year:2027,status:"planned",teamIds:["A","M"]});
+ });
+ // The physician C0 belongs to both teams, so Azord can still use that physician.
+ await assertSucceeds(getDoc(doc(azord,"customers/C0")));
+ await assertFails(getDoc(doc(azord,"customers/F0")));
+ await assertFails(getDocs(collection(azord,"customers")));
+ const permitted=await assertSucceeds(getDocs(query(collection(azord,"customers"),where("visitingTeams","array-contains","A"))));
+ assert.ok(permitted.docs.some(x=>x.id==="C0"));
+ await assertFails(getDoc(doc(azord,"activities/only-m")));
+ await assertSucceeds(getDoc(doc(azord,"activities/shared-a-m")));
+ await assertFails(getDocs(collection(azord,"activities")));
+ const myActivities=await assertSucceeds(getDocs(query(collection(azord,"activities"),where("teamIds","array-contains","A"))));
+ assert.equal(myActivities.size,1);
+ // Matador's configuration is independent, so it can still view the same data.
+ await assertSucceeds(getDoc(doc(matador,"customers/C0")));
+ await assertSucceeds(getDoc(doc(matador,"activities/shared-a-m")));
+ await assertSucceeds(getDoc(doc(matador,"activities/only-m")));
+ // Turning Azord's visibility back on preserves all existing records.
+ await assertSucceeds(setDoc(doc(admin,"teamVisibility/A"),{showOtherTeams:true,updatedBy:"admin",updatedAt:serverTimestamp()}));
+ await assertSucceeds(getDoc(doc(azord,"customers/F0")));
+ await assertSucceeds(getDoc(doc(azord,"activities/only-m")));
+});
