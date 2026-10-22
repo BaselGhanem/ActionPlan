@@ -148,29 +148,20 @@ export async function buildWorkbook(data) {
       ]),
     ],
     [
-      `التوزيعات`,
-      [
-        `رقم النشاط`,
-        `كود العميل`,
-        `العميل`,
-        `الفريق`,
-        `المخطط USD`,
-        `الفعلي USD`,
-        `الحالة`,
-      ],
-      data.activities.flatMap((a) =>
-        a.clients.flatMap((c) =>
-          c.shares.map((s) => [
-            a.id,
-            c.code,
-            c.name,
-            s.teamName || data.teams.find((t) => t.id === s.teamId)?.name,
-            s.amount / 100,
-            s.actual === null ? null : s.actual / 100,
-            { planned: `مخطط`, executed: `منفذ`, cancelled: `ملغي` }[a.status],
-          ]),
-        ),
-      ),
+      `التوزيع على الفرق`,
+      [`رقم النشاط`,`نوع النشاط`,`الفريق`,`المخطط USD`,`الفعلي USD`,`الحالة`],
+      data.activities.flatMap(a=>(a.teamShares||[]).map(s=>[
+        a.id,a.type,s.teamName||data.teams.find(t=>t.id===s.teamId)?.name||s.teamId,
+        s.amount/100,s.actual===null?null:s.actual/100,
+        {planned:`مخطط`,executed:`منفذ`,cancelled:`ملغي`}[a.status],
+      ])),
+    ],
+    [
+      `المشاركون في الأنشطة`,
+      [`رقم النشاط`,`نوع النشاط`,`كود العميل`,`العميل`,`التخصص`,`المنطقة`],
+      data.activities.flatMap(a=>a.clients.map(c=>[
+        a.id,a.type,c.code,c.name,c.specialty||``,c.area||``,
+      ])),
     ],
   ];
   for (const [name, headers, rows] of sheets) {

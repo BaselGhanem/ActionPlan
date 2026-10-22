@@ -1297,19 +1297,32 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
       classification: ``,
     });
   const reportSourceRows = useMemo(() => {
-    const rosters = new Map(data.rosters.map(r => [
-      r.teamId, new Map(r.rows.map(c=>[c.code,c.classification || ``])),
-    ]));
-    return data.activities.flatMap(activity => activity.clients.flatMap(client =>
-      client.shares.map(share => ({
-        activity, client, share, team: share.teamId,
-        month: activity.date?.slice(5,7) || `unscheduled`,
-        type: activity.type, status: activity.status,
-        area: client.area || ``, specialty: client.specialty || ``,
-        classification: rosters.get(share.teamId)?.get(client.code) || ``,
-      })),
-    ));
-  }, [data]);
+    const rosters=new Map(data.rosters.map(r=>[r.teamId,new Map(r.rows.map(c=>[c.code,c.classification||``]))]));
+    return data.activities.flatMap(activity=>{
+      const common={month:activity.date?.slice(5,7)||`unscheduled`,type:activity.type,status:activity.status};
+      if(activity.schema===3){
+        const specs=[...new Set(activity.clients.map(c=>String(c.specialty||``).trim()).filter(Boolean))];
+        const areas=[...new Set(activity.clients.map(c=>String(c.area||``).trim()).filter(Boolean))];
+        const specialty=specs.length===0?``:specs.length===1?specs[0]:`متعدد التخصصات`;
+        const area=areas.length===1?areas[0]:areas.length?`مناطق متعددة`:``;
+        if(view===`customers`)
+          return activity.clients.flatMap(client=>activity.teamShares.map(share=>({
+            activity,client,share:{...share,amount:0,actual:0},team:share.teamId,
+            specialty:client.specialty||``,area:client.area||``,
+            classification:rosters.get(share.teamId)?.get(client.code)||``,unattributed:true,...common,
+          })));
+        return activity.teamShares.map(share=>({
+          activity,client:{code:`activity-${activity.id}`,name:`نشاط مشترك`,specialty,area},
+          share,team:share.teamId,specialty,area,classification:``,...common,
+        }));
+      }
+      return activity.clients.flatMap(client=>client.shares.map(share=>({
+        activity,client,share,team:share.teamId,area:client.area||``,
+        specialty:client.specialty||``,
+        classification:rosters.get(share.teamId)?.get(client.code)||``,...common,
+      })));
+    });
+  },[data,view]);
   const reportOptions = useMemo(() =>
     Object.fromEntries(reportKeys.map(key => [
       key, selectedOptions(facetOptions(reportSourceRows,filters,reportKeys,key), filters[key]),
@@ -1364,7 +1377,7 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
       <div className="section-heading">
         <div>
           <h2>التقارير والتحليلات</h2>
-          <p>تفاصيل التوزيعات تمنع تكرار احتساب النشاط المشترك</p>
+          <p>تعتمد الأرقام على حصص الفرق، والأنشطة متعددة التخصصات تُعرض دون توزيع مالي افتراضي على الأطباء</p>
         </div>
         <button className="primary" disabled={busy} onClick={exportExcel}>
           <FileXls size={21} />
@@ -1424,8 +1437,8 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
                   }
                 </th>
                 <th>عدد الأنشطة</th>
-                <th>المخطط غير الملغي USD</th>
-                <th>الفعلي المسجل USD</th>
+                <th>{view===`customers`?`المخطط USD*`:`المخطط غير الملغي USD`}</th>
+                <th>{view===`customers`?`الفعلي USD*`:`الفعلي المسجل USD`}</th>
               </tr>
             </thead>
             <tbody>
@@ -1440,8 +1453,8 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
                     )}
                   </td>
                   <td>{g.count.size}</td>
-                  <td className="numeric">{money(g.planned)}</td>
-                  <td className="numeric">{money(g.actual)}</td>
+                  <td className="numeric">{view===`customers`?`—`:money(g.planned)}</td>
+                  <td className="numeric">{view===`customers`?`—`:money(g.actual)}</td>
                 </tr>
               ))}
             </tbody>
@@ -1449,16 +1462,8 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
               <tr>
                 <td>الإجمالي</td>
                 <td>{new Set(rows.map((r) => r.activity.id)).size}</td>
-                <td className="numeric">
-                  {money(
-                    [...groups.values()].reduce((s, g) => s + g.planned, 0),
-                  )}
-                </td>
-                <td className="numeric">
-                  {money(
-                    [...groups.values()].reduce((s, g) => s + g.actual, 0),
-                  )}
-                </td>
+                <td className="numeric">{view===`customers`?`—`:money([...groups.values()].reduce((s,g)=>s+g.planned,0))}</td>
+                <td className="numeric">{view===`customers`?`—`:money([...groups.values()].reduce((s,g)=>s+g.actual,0))}</td>
               </tr>
             </tfoot>
           </table>
