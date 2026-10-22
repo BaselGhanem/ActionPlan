@@ -24,3 +24,5 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Admin-only customer deletion uses archive/soft removal across ALL team rosters; preserve historical activities and spend. Bulk delete limited to explicitly filtered results, typed confirmation, audit per transaction (10 customers), no concurrent imports. Re-uploading a roster can restore archived customers.
 
 - Match saved activities by customer code across all teams (not by doctor name); the shared ClientName component puts a compact calendar activity indicator on doctors anywhere their name appears in the UI. Directory Activity dropdown is part of cascading filters and offers with/without activity; cancelled counts as existing history, deleted does not.
+
+- Reports include specialty grouping matching the teams-report columns; aggregate recorded client/team share amounts per specialty, distinct activity IDs, include "بدون تخصص" blank group. This is reporting only: do not change shared-activity allocation logic without confirmation.

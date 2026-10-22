@@ -39,6 +39,7 @@ import {
 import { auth, request, resolveLogin } from "./firebase";
 import { EMPTY_SPECIALTY, directoryKeys, reportKeys, matchingRows, facetOptions, selectedOptions } from "./data/cascading-filters";
 import { activityCountsByCustomer, isDoctorClient, hasCustomerActivity } from "./data/activity-presence";
+import { groupBySpecialty } from "./data/specialty-report";
 import { demoData } from "./demo";
 import {
   equally,
@@ -1794,8 +1795,8 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
     [`team`,`الفريق`],[`month`,`الشهر`],[`type`,`نوع النشاط`],
     [`status`,`الحالة`],[`area`,`المنطقة`],[`specialty`,`التخصص`],[`classification`,`التصنيف`],
   ];
-  const groups = new Map();
-  rows.forEach((r) => {
+  const groups = view === `specialties` ? groupBySpecialty(rows) : new Map();
+  if (view !== `specialties`) rows.forEach((r) => {
     const key =
       view === `customers`
         ? r.client.code
@@ -1838,6 +1839,7 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
       <div className="tabs">
         {[
           [`teams`, `حسب الفرق`],
+          [`specialties`, `حسب التخصص`],
           [`customers`, `حسب العملاء`],
           [`months`, `حسب الشهر`],
           [`types`, `حسب نوع النشاط`],
@@ -1879,6 +1881,7 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
                   {
                     {
                       teams: `الفريق`,
+                      specialties: `التخصص`,
                       customers: `العميل`,
                       months: `الشهر`,
                       types: `نوع النشاط`,
