@@ -1940,3 +1940,30 @@ tfoot td {
 .activity-derived-total input[readonly]{background:#eaf8f5;border-color:#a4dcd4;color:#085f61;font-size:16px;font-weight:800}
 .activity-cost-card{border-color:#bbe3dd;background:linear-gradient(140deg,#fff,#f5fcfa)}
 .activity-cost-item input[type="number"]{font-variant-numeric:tabular-nums;font-weight:700}
+
+/* Optional collapsed Honorarium per-doctor allocation, integrated in the cost card. */
+.honorarium-disclosure {border-top:1px solid #dcece9;margin-top:15px;padding-top:13px;}
+.honorarium-disclosure-button {width:100%;display:flex;align-items:center;gap:11px;text-align:right;padding:12px 14px;border-radius:12px;border:1px solid #cae2df;background:#f4fbf9;color:#194f59;cursor:pointer;transition:background .2s,border-color .2s;}
+.honorarium-disclosure-button:hover:not(:disabled){background:#e9f8f4;border-color:#83c6bc;}
+.honorarium-disclosure-button.expanded{background:#e8f7f3;border-color:#68b9b0;}
+.honorarium-disclosure-button:disabled{opacity:.55;cursor:not-allowed;}
+.honorarium-disclosure-label{display:flex;flex-direction:column;flex:1;font-weight:700;font-size:13px;min-width:0;}
+.honorarium-disclosure-label small{margin-top:4px;font-weight:400;color:#718a91;font-size:10px;}
+.honorarium-disclosure-amount{font-size:12px;font-weight:700;white-space:nowrap;color:#0c7778;}
+.honorarium-breakdown{border:1px solid #d5e9e5;border-top:0;border-radius:0 0 12px 12px;padding:12px;background:#fff;}
+.honorarium-breakdown-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:#687f8d;}
+.honorarium-doctor-rows{display:grid;gap:8px;}
+.honorarium-doctor-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;background:#f7fbfa;border:1px solid #e2eeeb;border-radius:9px;}
+.honorarium-doctor-name{display:flex;flex-direction:column;min-width:0;gap:2px;font-weight:700;font-size:12px;}
+.honorarium-doctor-name small{font-weight:400;font-size:10px;color:#7a919d;}
+.honorarium-doctor-amount{display:flex;flex-direction:column;flex:0 0 145px;gap:5px;min-width:0;}
+.honorarium-doctor-amount small{font-size:10px;color:#778e9e;}
+.honorarium-doctor-amount input{width:100%;min-width:0;text-align:left;font-weight:700;font-variant-numeric:tabular-nums;}
+.honorarium-reconcile{margin-top:10px;}
+.honorarium-note{font-size:10px;color:#738995;margin-top:9px;margin-bottom:0;}
+@media(max-width:530px){
+ .honorarium-disclosure-button{gap:7px;padding:11px;}
+ .honorarium-disclosure-amount{font-size:11px;}
+ .honorarium-doctor-amount{flex-basis:112px;}
+ .honorarium-doctor-row{padding:8px;gap:8px;}
+}

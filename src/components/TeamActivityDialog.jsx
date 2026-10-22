@@ -1,11 +1,17 @@
 import React from "react";
-import { X, Plus, FloppyDisk, SquaresFour, CheckCircle, Trash } from "@phosphor-icons/react";
+import { X, Plus, FloppyDisk, SquaresFour, CheckCircle, Trash, UsersThree, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { cents, equally, weighted } from "../data/domain.js";
-import { COST_CATEGORIES, costItemsTotal, withCostBreakdown } from "../data/cost-items.js";
+import { COST_CATEGORIES, costItemsTotal, withCostBreakdown, equalHonorariumShares, honorariumTotal } from "../data/cost-items.js";
+import { isDoctorClient } from "../data/activity-presence.js";
 const money = n => new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format((n||0)/100);
 const read = value => value===""?0:cents(value);
 export function TeamActivityDialog({ draft,setDraft,teams,types,eligible,canEdit,canCancel,busy,onClose,onSave,onDelete,onPick,renderName }) {
  const shares=draft.teamShares||[];
+ const doctors=draft.clients.filter(isDoctorClient);
+ const honors=honorariumTotal(draft.costItems);
+ const doctorShares=draft.honorariumShares||[];
+ const doctorDistributionEnabled=doctorShares.length>0;
+ const doctorSharesTotal=doctorShares.reduce((n,s)=>n+s.amount,0);
  const planned=shares.reduce((n,s)=>n+s.amount,0);
  const actual=shares.reduce((n,s)=>n+(s.actual||0),0);
  const update=patch=>setDraft(d=>({...d,...patch}));
@@ -58,7 +64,14 @@ export function TeamActivityDialog({ draft,setDraft,teams,types,eligible,canEdit
       <div className="activity-client-grid">
        {draft.clients.map(c=><div className="activity-client-item" key={c.code}>
         <span>{renderName(c)}<small>{c.code} • {c.specialty||"بدون تخصص"}</small></span>
-        <button type="button" className="icon-button" onClick={()=>setDraft(d=>({...d,clients:d.clients.filter(x=>x.code!==c.code)}))}><X size={16}/></button>
+        <button type="button" className="icon-button" onClick={()=>setDraft(d=>{
+          const clients=d.clients.filter(x=>x.code!==c.code);
+          if(!(d.honorariumShares||[]).length)return {...d,clients};
+          const nextDoctors=clients.filter(isDoctorClient);
+          const previous=d.honorariumShares||[];
+          const same=nextDoctors.length===previous.length&&nextDoctors.every(x=>previous.some(s=>s.code===String(x.code)));
+          return {...d,clients,honorariumShares:same?previous:equalHonorariumShares(nextDoctors,honorariumTotal(d.costItems))};
+        })}><X size={16}/></button>
        </div>)}
       </div>
       {!draft.clients.length&&<p className="warning-text">اختر عميلا واحدا على الأقل</p>}
@@ -101,7 +114,58 @@ export function TeamActivityDialog({ draft,setDraft,teams,types,eligible,canEdit
          <span>يوزع هذا المجموع على الفرق تلقائياً</span>
         </div>
        </div>
-      ):<p className="activity-cost-placeholder">التفاصيل اختيارية. أضف بندين مثلاً: تكلفة مرتبطة بالعميل 1,000 وغداء 500 من إجمالي 1,500</p>}
+      ):<p className="activity-cost-placeholder">التفاصيل اختيارية. يمكنك إضافة Honorarium وضيافة أو أي مصروف آخر.</p>}
+      <div className="honorarium-disclosure">
+       <button type="button" className={`honorarium-disclosure-button ${doctorDistributionEnabled?"expanded":""}`}
+        aria-pressed={doctorDistributionEnabled} aria-expanded={doctorDistributionEnabled}
+        disabled={!doctors.length||!honors}
+        title={!doctors.length?"أضف طبيبا مشاركا أولاً":!honors?"أدخل مبلغ Honorarium أولاً":"توزيع اختياري للأتعاب على الأطباء"}
+        onClick={()=>setDraft(d=>({...d,honorariumShares:(d.honorariumShares||[]).length
+          ?[]:equalHonorariumShares(d.clients,honorariumTotal(d.costItems))}))}>
+        <UsersThree size={19} aria-hidden="true"/>
+        <span className="honorarium-disclosure-label">توزيع Honorarium على الأطباء
+         <small>{doctorDistributionEnabled?"مفعّل • يمكنك تعديل حصة كل طبيب":"اختياري • غير مفعّل افتراضياً"}</small>
+        </span>
+        <span className="honorarium-disclosure-amount" dir="ltr">{money(honors)} USD</span>
+        {doctorDistributionEnabled?<CaretUp size={18}/>:<CaretDown size={18}/>}
+       </button>
+       {doctorDistributionEnabled&&(
+        <div className="honorarium-breakdown">
+         <div className="honorarium-breakdown-title">
+          <span>التوزيع بالتساوي هو الافتراضي، ويمكن تعديل أي حصة</span>
+          <button className="text-button" type="button" onClick={()=>
+           setDraft(d=>({...d,honorariumShares:equalHonorariumShares(d.clients,honorariumTotal(d.costItems))}))
+          }><SquaresFour size={16}/> توزيع بالتساوي</button>
+         </div>
+         <div className="honorarium-doctor-rows">
+          {doctorShares.map(share=>{
+           const client=doctors.find(c=>String(c.code)===String(share.code));
+           return <label className="honorarium-doctor-row" key={share.code}>
+            <span className="honorarium-doctor-name">{client?renderName(client):share.code}
+             <small>كود الطبيب: {share.code}</small>
+            </span>
+            <span className="honorarium-doctor-amount">
+             <small>Honorarium (USD)</small>
+             <input type="number" dir="ltr" min="0" step=".01"
+              aria-label={`Honorarium للطبيب ${client?.name||share.code}`}
+              value={share.amount?share.amount/100:""} placeholder="0.00"
+              onChange={e=>{try{
+               const amount=read(e.target.value);
+               setDraft(d=>({...d,honorariumShares:(d.honorariumShares||[]).map(x=>x.code===share.code?{...x,amount}:x)}));
+              }catch{/* Keep previous valid amount */}}/>
+            </span>
+           </label>;
+          })}
+         </div>
+         <div className={`activity-reconcile honorarium-reconcile ${honors===doctorSharesTotal?"":"invalid"}`} aria-live="polite">
+          <CheckCircle size={17}/>
+          موزع للأطباء: <b dir="ltr">{money(doctorSharesTotal)} USD</b>
+          <span>{honors===doctorSharesTotal?"المجموع مطابق للـ Honorarium":`المتبقي: ${money(honors-doctorSharesTotal)} USD — عدّل الحصص قبل الحفظ`}</span>
+         </div>
+         <p className="honorarium-note">هذا تفصيل تكلفة الطبيب فقط، ولا يغيّر حصص الفرق أو يخصم أي مبلغ إضافي من الميزانية.</p>
+        </div>
+       )}
+      </div>
      </section>
      <section className="activity-form-card">
       <div className="activity-form-heading"><h3>04 / توزيع إجمالي النشاط على الفرق</h3><button type="button" className="text-button" onClick={()=>distribute("amount")} disabled={!shares.length}><SquaresFour size={17}/> توزيع بالتساوي</button></div>
