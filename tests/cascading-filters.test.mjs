@@ -70,3 +70,17 @@ test(`report specialty filter includes empty historical specialty`,()=>{
  assert.deepEqual(facetOptions(r,{...rf,team:`B`,specialty:EMPTY_SPECIALTY},reportKeys,`month`),[`02`]);
  assert.deepEqual(facetOptions(r,{...rf,status:`cancelled`},reportKeys,`specialty`),[`Pediatric`]);
 });
+
+test(`activity state cascades with team, specialty and classification`,()=>{
+ const entries=[
+  {team:`A`,specialty:`Cardio`,area:`Amman`,classification:`A`,kind:`Doctor`,activity:`with`},
+  {team:`A`,specialty:`Cardio`,area:`Amman`,classification:`B`,kind:`Doctor`,activity:`without`},
+  {team:`B`,specialty:`Neuro`,area:`Irbid`,classification:`C`,kind:`Doctor`,activity:`without`},
+ ];
+ const all={...df,activity:``};
+ assert.deepEqual(facetOptions(entries,{...all,team:`A`},directoryKeys,`activity`),[`with`,`without`]);
+ assert.deepEqual(facetOptions(entries,{...all,team:`A`,activity:`without`},directoryKeys,`classification`),[`B`]);
+ assert.deepEqual(facetOptions(entries,{...all,activity:`without`,specialty:`Neuro`},directoryKeys,`team`),[`B`]);
+ assert.equal(matchingRows(entries,{...all,team:`A`,activity:`without`},directoryKeys).length,1);
+ assert.equal(matchingRows(entries,all,directoryKeys).length,3);
+});

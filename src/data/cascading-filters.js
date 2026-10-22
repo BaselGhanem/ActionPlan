@@ -1,7 +1,7 @@
 // Each facet respects every other selected dimension, excluding its own.
 // A dedicated value distinguishes "all specialties" from records with no specialty.
 export const EMPTY_SPECIALTY = `__ACTIONPLAN_EMPTY_SPECIALTY__`;
-export const directoryKeys = [`team`, `specialty`, `area`, `kind`, `classification`];
+export const directoryKeys = [`team`, `specialty`, `area`, `kind`, `classification`, `activity`];
 export const reportKeys = [`team`, `month`, `type`, `status`, `area`, `specialty`, `classification`];
 
 const facetValue = (row, field) => {
