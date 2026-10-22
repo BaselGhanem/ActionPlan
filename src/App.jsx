@@ -420,9 +420,9 @@ export function App() {
     }
     return data.teams.filter(t=>rosterMap.get(t.id)?.has(c.code));
   };
-  const activityTeamOptions = data.visibilityHidden
+  const activityTeamOptions = data?.visibilityHidden
     ? [...new Map([...data.teams,...Object.values(data.sharedTeamsByCustomer||{}).flat()].map(t=>[t.id,t])).values()]
-    : data.teams;
+    : data?.teams||[];
   const canManageCustomers = data?.profile.role === `admin` && !isDemo;
   const hasDirectoryFilter = Object.values(filters).some(value => String(value||``).trim());
   function openCustomerArchive(customers){
