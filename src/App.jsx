@@ -414,8 +414,15 @@ export function App() {
       ...(key === `team` ? { classification: `` } : {}),
     }));
   }
-  const eligible = (c) =>
-    data.teams.filter((t) => rosterMap.get(t.id)?.has(c.code));
+  const eligible = (c) => {
+    if(data.visibilityHidden){
+      return data.sharedTeamsByCustomer?.[String(c.code)]||data.teams.filter(t=>rosterMap.get(t.id)?.has(c.code));
+    }
+    return data.teams.filter(t=>rosterMap.get(t.id)?.has(c.code));
+  };
+  const activityTeamOptions = data.visibilityHidden
+    ? [...new Map([...data.teams,...Object.values(data.sharedTeamsByCustomer||{}).flat()].map(t=>[t.id,t])).values()]
+    : data.teams;
   const canManageCustomers = data?.profile.role === `admin` && !isDemo;
   const hasDirectoryFilter = Object.values(filters).some(value => String(value||``).trim());
   function openCustomerArchive(customers){
@@ -978,7 +985,7 @@ export function App() {
         <TeamActivityDialog
           draft={draft}
           setDraft={setDraft}
-          teams={data.teams}
+          teams={activityTeamOptions}
           types={data.settings.types}
           eligible={eligible}
           canEdit={Boolean(canEdit)}

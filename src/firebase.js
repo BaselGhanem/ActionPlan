@@ -62,6 +62,9 @@ async function load(){const p=await profile();let f=await getDoc(financeRef);if(
  ]);
  const fetchedCustomers=c?list(c):cachedCustomers;
  if(c)void writeRosterCache(cacheKey,JSON.parse(JSON.stringify(fetchedCustomers)));
+ const sharedTeamsByCustomer=limited?Object.fromEntries(fetchedCustomers.filter(c=>c.deleted!==true).map(c=>[
+  String(c.code),allTeams.filter(t=>(c.visitingTeams||[]).includes(t.id)).map(t=>({id:t.id,name:t.name}))
+ ])):{};
  const customers=fetchedCustomers.filter(c=>c.deleted!==true).map(c=>limited?{
   code:c.code,name:c.name,kind:c.kind,specialty:c.specialty,area:c.area,
   visitingTeams:[p.teamId],visits:{[p.teamId]:c.visits?.[p.teamId]},
@@ -79,7 +82,7 @@ async function load(){const p=await profile();let f=await getDoc(financeRef);if(
    total:activity.total,actual:activity.actual,
    costItems:[],honorariumShares:[],notes:``,scopedView:true};
  });
- return {profile:p,teams,customers,rosters,activities,visibilityHidden:limited,
+ return {profile:p,teams,customers,rosters,activities,visibilityHidden:limited,sharedTeamsByCustomer,
   settings:{types:financial.types},users:u?list(u).filter(u=>u.current!==false):[],
   teamVisibility:teamVisibility?list(teamVisibility):[],
   standalone:{quotas:quotas?list(quotas):[],choices:choices?list(choices):[]}};}
