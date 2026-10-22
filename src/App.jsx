@@ -46,6 +46,7 @@ import { TeamActivityDialog } from "./components/TeamActivityDialog";
 import { ActualTracking } from "./components/ActualTracking";
 import { Standalone } from "./components/Standalone";
 import { demoData } from "./demo";
+import {downloadLocalDirectory} from "./data/customer-cache.js";
 import {
   equally,
   weighted,
@@ -208,11 +209,13 @@ function Login({ onError, loading }) {
       );
     } catch (e) {
       onError(
-        e.code === `auth/invalid-credential`
-          ? `اسم المستخدم أو كلمة المرور غير صحيحة`
-          : e.code === `auth/unauthorized-domain`
-            ? `يجب إضافة نطاق الموقع إلى Authorized domains في Firebase`
-            : e.message,
+        [`auth/invalid-credential`,`auth/invalid-login-credentials`,`auth/wrong-password`,`auth/user-not-found`,`auth/invalid-email`].includes(e.code)
+          ? `اسم المستخدم أو كلمة المرور غير صحيحة. تأكد من الحساب الفعّال بعد إعادة تعيين كلمة المرور`
+          : e.code===`auth/too-many-requests`?`محاولات تسجيل كثيرة؛ حاول لاحقاً أو اطلب من الأدمن إعادة تعيين الحساب`
+          : e.code===`auth/user-disabled`?`هذا الحساب معطل، راجع الأدمن`
+          : e.code===`auth/network-request-failed`?`تعذر الاتصال بخدمة تسجيل الدخول؛ افحص الاتصال وأعد المحاولة`
+          : e.code===`auth/unauthorized-domain`?`يجب إضافة نطاق الموقع إلى Authorized domains في Firebase`
+          : `تعذر تسجيل الدخول (${e.code||"unknown"}). ${e.message}`,
       );
     } finally {
       setBusy(false);
@@ -302,7 +305,8 @@ export function App() {
       kind: ``,
       activity: ``,
     }),
-    [pageNo, setPageNo] = useState(1);
+    [pageNo, setPageNo] = useState(1),
+    [expandedDirectory, setExpandedDirectory] = useState(false);
   function notify(message, type = `error`) {
     setToast({ message, type });
   }
@@ -338,7 +342,15 @@ export function App() {
   }, []);
   useEffect(() => {
     setPageNo(1);
+    setExpandedDirectory(false);
   }, [filters]);
+  useEffect(()=>{
+    if(data?.visibilityHidden&&data.teams.length===1){
+      const only=data.teams[0].id;
+      setFilters(f=>f.team===only?f:{...f,team:only,classification:""});
+    }
+  },[data?.visibilityHidden,data?.teams]);
+  const directoryPageSize=50;
   const manager = data && [`admin`, `manager`].includes(data.profile.role);
   const allowed = routes.filter((r) => (r.id !== `admin` || manager) && (r.id !== `standalone` || data?.profile.role !== `manager`));
   const activityCounts = useMemo(
@@ -702,7 +714,7 @@ export function App() {
                     value={filters.team}
                     onChange={(e) => changeFilter(`team`, e.target.value)}
                   >
-                    <option value="">جميع الفرق</option>
+                    {!data.visibilityHidden && <option value="">جميع الفرق</option>}
                     {data.teams.filter(t => directoryOptions.team.includes(t.id)).map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name}
@@ -783,9 +795,13 @@ export function App() {
                         <Trash size={17}/> حذف نتائج الفلاتر ({visible.length})
                       </button>
                     )}
+                    <button type="button" className="text-button" onClick={()=>{
+                      downloadLocalDirectory(visible);notify(`تم تنزيل قائمة العملاء المعروضة (${visible.length}) بصيغة CSV`,`success`);
+                    }}><Download size={17}/> تنزيل القائمة للجهاز</button>
                     <button className="text-button" onClick={() => {
                       setFilters({
-                        search: ``,team: ``,specialty: ``,area: ``,classification: ``,kind: ``,activity: ``,
+                        search:``,team:data.visibilityHidden&&data.teams.length===1?data.teams[0].id:``,
+                        specialty:``,area:``,classification:``,kind:``,activity:``,
                       });
                     }}>
                       مسح الفلاتر
@@ -809,7 +825,7 @@ export function App() {
                     </thead>
                     <tbody>
                       {visible
-                        .slice((pageNo - 1) * 12, pageNo * 12)
+                        .slice(expandedDirectory?0:(pageNo-1)*directoryPageSize,expandedDirectory?undefined:pageNo*directoryPageSize)
                         .map((c) => {
                           const selected = draft?.clients.some(
                             (x) => x.code === c.code,
@@ -884,24 +900,27 @@ export function App() {
                 {visible.length > 0 && (
                   <div className="pagination">
                     <span>
-                      عرض {(pageNo - 1) * 12 + 1}–
-                      {Math.min(pageNo * 12, visible.length)} من{" "}
+                      عرض {expandedDirectory?1:(pageNo-1)*directoryPageSize+1}–
+                      {expandedDirectory?visible.length:Math.min(pageNo*directoryPageSize,visible.length)} من{" "}
                       {visible.length} نتيجة
                     </span>
                     <div>
-                      <button
+                      <button type="button" className="text-button" onClick={()=>{setExpandedDirectory(v=>!v);setPageNo(1);}}>
+                        {expandedDirectory?"عرض 50 لكل صفحة":"توسيع القائمة • عرض الكل"}
+                      </button>
+                      {!expandedDirectory&&<button
                         disabled={pageNo === 1}
                         onClick={() => setPageNo((p) => p - 1)}
                       >
                         السابق
-                      </button>
-                      <b>{pageNo}</b>
-                      <button
-                        disabled={pageNo * 12 >= visible.length}
+                      </button>}
+                      {!expandedDirectory&&<b>{pageNo}</b>}
+                      {!expandedDirectory&&<button
+                        disabled={pageNo * directoryPageSize >= visible.length}
                         onClick={() => setPageNo((p) => p + 1)}
                       >
                         التالي
-                      </button>
+                      </button>}
                     </div>
                   </div>
                 )}
