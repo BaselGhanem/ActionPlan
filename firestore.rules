@@ -308,7 +308,7 @@ service cloud.firestore {
    allow delete: if false;
   }
   function standaloneAccess(t) {
-   return manager() || (active() && user().role == 'team' && user().teamId == t);
+   return admin() || (active() && user().role == 'team' && user().teamId == t);
   }
   function standaloneCampaign(c,t) {
    let f=get(/databases/$(database)/documents/finance/2027).data;
@@ -330,7 +330,7 @@ service cloud.firestore {
    return getAfter(/databases/$(database)/documents/standaloneQuotas/$(c + '__' + t)).data;
   }
   match /standaloneQuotas/{key} {
-   allow get,list: if active() && (manager() || resource.data.teamId == user().get('teamId','_'));
+   allow get,list: if active() && (admin() || resource.data.teamId == user().get('teamId','_'));
    allow create: if admin() && request.resource.data.keys().hasOnly(['campaign','teamId','limit','count']) &&
     key == request.resource.data.campaign + '__' + request.resource.data.teamId &&
     standaloneCampaign(request.resource.data.campaign,request.resource.data.teamId) &&
@@ -362,8 +362,8 @@ service cloud.firestore {
   match /standaloneChoices/{choiceId} {
    // A transaction must be able to read a *missing* choice before creating it.
    // Existing choices remain protected to the owning team or admin.
-   allow get: if active() && (resource == null || manager() || resource.data.teamId == user().get('teamId','_'));
-   allow list: if active() && (manager() || resource.data.teamId == user().get('teamId','_'));
+   allow get: if active() && (resource == null || admin() || resource.data.teamId == user().get('teamId','_'));
+   allow list: if active() && (admin() || resource.data.teamId == user().get('teamId','_'));
    allow create: if standaloneAccess(request.resource.data.teamId) &&
     standaloneCampaign(request.resource.data.campaign,request.resource.data.teamId) &&
     choiceId == request.resource.data.campaign + '__' + request.resource.data.teamId + '__' + request.resource.data.code &&

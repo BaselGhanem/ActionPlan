@@ -17,7 +17,7 @@ export const specialtyMatches=(campaign,specialty)=>{
 export const isDoctor=(c)=>["doctor","physician","طبيب","طبيبة","دكتور","دكتورة"].includes(String(c?.kind||"").trim().toLocaleLowerCase());
 export const eligibleDoctor=(campaign,c,teamId)=>Boolean(isDoctor(c)&&specialtyMatches(campaign,c.specialty)&&c.visitingTeams?.includes(teamId));
 export function visibleStandaloneGroups(teams,profile){
- const privileged=["admin","manager"].includes(profile?.role);
+ const privileged=profile?.role==="admin";
  return STANDALONE_CAMPAIGNS.flatMap(c=>teams
   .filter(t=>teamForCampaign(c,t)&&(privileged||t.id===profile?.teamId))
   .map(t=>({...c,teamId:t.id,teamName:t.name,key:c.id+"__"+t.id})));

@@ -6,7 +6,7 @@ export function Standalone({data,busy,onChoose,onInit}){
  const [active,setActive]=useState("");
  const [search,setSearch]=useState("");
  const [onlySelected,setOnlySelected]=useState(false);
- const profile=data.profile,privileged=["admin","manager"].includes(profile.role);
+ const profile=data.profile,privileged=profile.role==="admin";
  const groups=useMemo(()=>visibleStandaloneGroups(data.teams,profile),[data.teams,profile]);
  const enabled=new Map((data.standalone?.quotas||[]).map(q=>[q.campaign+"__"+q.teamId,q]));
  const choices=data.standalone?.choices||[];

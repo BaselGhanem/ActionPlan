@@ -340,7 +340,7 @@ export function App() {
     setPageNo(1);
   }, [filters]);
   const manager = data && [`admin`, `manager`].includes(data.profile.role);
-  const allowed = routes.filter((r) => r.id !== `admin` || manager);
+  const allowed = routes.filter((r) => (r.id !== `admin` || manager) && (r.id !== `standalone` || data?.profile.role !== `manager`));
   const activityCounts = useMemo(
     () => activityCountsByCustomer(data?.activities || []),
     [data?.activities],
