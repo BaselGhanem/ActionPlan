@@ -851,6 +851,7 @@ export function App() {
                       العملاء <span className="count">{visible.length}</span>
                     </h2>
                     <p>اختر عميلا أو أكثر لإنشاء نشاط وتوزيع ميزانيته</p>
+                    <small className="activity-legend"><CalendarCheck size={14} weight="fill" aria-hidden="true" /> أيقونة التقويم: الطبيب لديه Activity مسجلة</small>
                   </div>
                   <div className="directory-actions">
                     {canManageCustomers && (

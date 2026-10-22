@@ -1809,3 +1809,17 @@ tfoot td {
 }
 .client-activity-indicator svg { display: block; }
 .activity-client-names .client-name-with-activity { margin-inline: 2px; }
+
+/* Six cascading controls in a single row on wide screens */
+@media (min-width: 1201px) {
+  .filter-bar { grid-template-columns: minmax(160px, 1.3fr) repeat(5, minmax(86px, 1fr)); }
+}
+.activity-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #48746f;
+  margin-top: 5px;
+  font-size: 10px;
+}
+.activity-legend svg { color: #087f7f; flex-shrink: 0; }
