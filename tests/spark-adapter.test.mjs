@@ -29,6 +29,11 @@ test(`Spark adapter: bootstrap, provisioning, imports, distribution, reset and o
  const d={type:data.settings.types[0],status:`planned`,total:10000,actual:null,date:``,notes:``,clients:[{...data.customers.find(c=>c.code===`001`),amount:10000,actual:null,shares:[{teamId:t1,amount:5000,actual:null},{teamId:t2,amount:5000,actual:null}]}]};
  const a=(await request(`saveActivity`,d)).id;data=await request(`load`);assert.equal(data.teams.find(t=>t.id===t1).used,5000);
  await assert.rejects(request(`saveActivity`,{...d,total:300000,clients:d.clients.map(c=>({...c,amount:300000,shares:c.shares.map(s=>({...s,amount:150000}))}))}));
+ const earlyModern={id:a,type:d.type,status:`planned`,total:10000,actual:null,date:`2027-05-14`,notes:`initial conversion`,
+  clients:[{code:`001`,name:`الاسم المعتمد الأخير`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
+  teamShares:[{teamId:t1,amount:6500,actual:null},{teamId:t2,amount:3500,actual:null}]};
+ await request(`saveActivity`,earlyModern);
+ await request(`saveActivity`,{...d,id:a});
  await signOut(auth);await signInWithEmailAndPassword(auth,email,pass);
  await request(`updateUser`,{id:oldUser.id,password:`NewLocal-Password-43`,active:true});assert.equal(auth.currentUser.uid,admin.uid);
  const newEmail=await resolveLogin(`team1`);assert.notEqual(newEmail,oldEmail);
