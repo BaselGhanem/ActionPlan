@@ -203,3 +203,7 @@ test("optional per-doctor Honorarium share is saved and reconciled separately fr
   tamper:body=>({...body,honorariumShares:{C0:-5000,C1:15000,C2:15000}}),
  }));
 });
+
+test("direct forged cost-proof cannot bypass the activity proposal",async()=>{
+ await assertFails(setDoc(doc(db(),"proposals/does-not-exist/checks/costs"),{ok:true}));
+});

@@ -7,5 +7,7 @@ export async function prepareProofs(db,body,{owner,baseRev,rosterEpoch,proofId})
  await setDoc(doc(db,`proposals/${proofId}`),proposal);
  await Promise.all([...body.clientKeys.map(key=>setDoc(doc(db,`proposals/${proofId}/rows/${key}`),{ok:true})),...body.teamIds.map(key=>setDoc(doc(db,`proposals/${proofId}/totals/${key}`),{ok:true}))]);
  await Promise.all([setDoc(doc(db,`proposals/${proofId}/checks/rows`),{ok:true}),setDoc(doc(db,`proposals/${proofId}/checks/totals`),{ok:true})]);
+ if((body.costItems||[]).length||Object.keys(body.honorariumShares||{}).length)
+  await setDoc(doc(db,`proposals/${proofId}/checks/costs`),{ok:true});
  return proposal.body;
 }

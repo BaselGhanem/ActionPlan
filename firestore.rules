@@ -124,7 +124,6 @@ service cloud.firestore {
     (a.status != 'cancelled' || old.actual == null || a.actual == old.actual) &&
     a.type is string && a.type in f.types && a.notes is string && a.notes.size() <= 3000 &&
     a.date is string && (a.date == '' || a.date.matches('2027-((01|03|05|07|08|10|12)-(0[1-9]|[12][0-9]|3[01])|(04|06|09|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))')) &&
-    validCostItems(a) && validHonorariumShares(a) &&
     validMoney(a.total) && a.total > 0 && (a.actual == null || validMoney(a.actual)) && (a.status != 'executed' || a.actual != null) &&
     a.teamIds is list && a.teamIds.size() > 0 && a.teamIds.size() <= 8 && a.teamIds.toSet().size() == a.teamIds.size() && a.teamIds.toSet().hasOnly(f.teams.keys()) &&
     a.clientKeys is list && a.clientKeys.size() > 0 && a.clientKeys.size() <= 8 && a.clientKeys.toSet().size() == a.clientKeys.size() &&
@@ -143,7 +142,9 @@ service cloud.firestore {
    return p.authz == {'role':user().role,'teamId':user().get('teamId',null),'accountId':principal()} && p.owner == request.auth.uid && p.activityId == f.mutation.activityId && p.baseRev == (old == null ? 0 : old.rev) && p.rosterEpoch == f.get('rosterEpoch',0) &&
     a.diff(p.body).affectedKeys().hasOnly(['updatedAt']) &&
     get(/databases/$(database)/documents/proposals/$(a.proofId)/checks/rows).data.ok == true &&
-    get(/databases/$(database)/documents/proposals/$(a.proofId)/checks/totals).data.ok == true;
+    get(/databases/$(database)/documents/proposals/$(a.proofId)/checks/totals).data.ok == true &&
+    ((a.get('costItems',[]).size() == 0 && a.get('honorariumShares',{}).size() == 0) ||
+     get(/databases/$(database)/documents/proposals/$(a.proofId)/checks/costs).data.ok == true);
   }
   function receipt(a,activityId,old) { let m=fAfter().mutation; return m.activityId == activityId && m.rev == a.rev && m.uid == request.auth.uid && m.after == a && m.before == old && getAfter(/databases/$(database)/documents/audit/$(activityId + '_' + string(a.rev))).data == m; }
   function validBalance(old,a,t) {
@@ -200,7 +201,8 @@ service cloud.firestore {
    }
    match /checks/{kind} {
     allow read: if active();
-    allow create: if request.resource.data == {'ok':true} && proposalOwner(proposal(pid)) && ((kind == 'rows' && rowChecks(pid,proposal(pid))) || (kind == 'totals' && totalChecks(pid,proposal(pid))));
+    allow create: if request.resource.data == {'ok':true} && proposalOwner(proposal(pid)) && ((kind == 'rows' && rowChecks(pid,proposal(pid))) || (kind == 'totals' && totalChecks(pid,proposal(pid))) ||
+     (kind == 'costs' && validCostItems(proposal(pid).body) && validHonorariumShares(proposal(pid).body)));
    }
   }
   function rowChecks(pid,p) { return (p.body.clientKeys.size() <= 0 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[0]))) && (p.body.clientKeys.size() <= 1 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[1]))) && (p.body.clientKeys.size() <= 2 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[2]))) && (p.body.clientKeys.size() <= 3 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[3]))) && (p.body.clientKeys.size() <= 4 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[4]))) && (p.body.clientKeys.size() <= 5 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[5]))) && (p.body.clientKeys.size() <= 6 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[6]))) && (p.body.clientKeys.size() <= 7 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[7]))); }
