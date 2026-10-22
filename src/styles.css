@@ -1823,3 +1823,94 @@ tfoot td {
   font-size: 10px;
 }
 .activity-legend svg { color: #087f7f; flex-shrink: 0; }
+
+/* 2027 annual activity editor - centered large dialog with separate mobile ergonomics */
+.activity-modal-backdrop {position:fixed;inset:0;background:#102d4bc7;backdrop-filter:blur(5px);z-index:65;display:flex;justify-content:center;align-items:center;padding:20px;}
+.activity-modal {width:min(1120px,100%);max-height:min(94vh,1000px);background:#f8fafc;border:1px solid #d9e5ee;box-shadow:0 30px 100px #0b25414d;border-radius:17px;display:flex;flex-direction:column;overflow:hidden;direction:rtl;}
+.activity-modal-header {display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:21px 28px;background:white;border-bottom:1px solid #e0e8f0;}
+.activity-modal-header h2 {font-size:22px;margin:4px 0;}
+.activity-modal-header p {color:#687f90;}
+.activity-modal-header small {font-weight:700;color:#099999;}
+.activity-modal-body {padding:21px 26px;overflow-y:auto;min-height:0;overscroll-behavior:contain;}
+.activity-form {display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:start;}
+.activity-form-card {min-width:0;background:white;border:1px solid #e4edf3;border-radius:12px;padding:19px 18px;}
+.activity-form-card:nth-child(1),.activity-form-card:nth-child(3),.activity-form-card:last-child {grid-column:1/-1;}
+.activity-form-card h3 {margin-bottom:14px;color:#153c5e;font-size:15px;}
+.activity-form-heading {display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:13px;}
+.activity-form-heading h3 {margin:0;}
+.activity-form-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 17px;}
+.activity-form-grid .field {min-width:0;}
+.activity-form-grid .hint {align-self:center;margin-bottom:13px;}
+.activity-client-grid {display:flex;flex-wrap:wrap;gap:8px;}
+.activity-client-item {display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f3f8fc;border:1px solid #dce8f1;border-radius:9px;padding:8px 9px;max-width:100%;}
+.activity-client-item > span {font-weight:700;font-size:12px;}
+.activity-client-item small {display:block;font-weight:400;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
+.activity-client-item .icon-button {padding:4px;}
+.activity-team-options {display:flex;flex-wrap:wrap;gap:8px 22px;margin-bottom:16px;}
+.activity-team-options .check-line {margin:0;background:#f5f9fc;border-radius:8px;padding:9px 11px;}
+.activity-share-grid {display:grid;gap:9px;}
+.activity-share-row {display:grid;grid-template-columns:minmax(140px,1.3fr) minmax(125px,1fr) minmax(125px,1fr);gap:12px;align-items:end;background:#f8fbfe;border:1px solid #e6eef5;border-radius:8px;padding:11px;}
+.activity-share-row b {font-size:12px;align-self:center;}
+.activity-share-row label {display:flex;flex-direction:column;gap:5px;font-size:10px;color:#688198;}
+.activity-share-row input {min-width:0;text-align:left;}
+.activity-reconcile {display:flex;gap:9px;flex-wrap:wrap;align-items:center;background:#e8f5f1;border-radius:9px;margin-top:12px;padding:11px 13px;color:#196b5b;font-size:12px;}
+.activity-reconcile span {margin-inline-start:auto;}
+.activity-reconcile.invalid {background:#fff0ee;color:#ae443a;}
+.activity-modal-footer {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:15px 26px;background:#fff;border-top:1px solid #dfebf3;}
+.activity-modal-footer > div {display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.activity-modal-footer .primary {min-height:42px;}
+/* Actual expense workflow */
+.actual-stats {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-bottom:20px;}
+.actual-stats > div {background:white;border:1px solid #e1eaf2;border-radius:12px;padding:19px;display:flex;flex-direction:column;gap:7px;}
+.actual-stats b {font-family:Inter,Cairo,sans-serif;font-size:25px;color:#123d65;}
+.actual-toolbar {display:flex;gap:12px;align-items:center;background:white;border:1px solid #e1eaf2;border-radius:11px;padding:13px;margin-bottom:15px;}
+.actual-toolbar .search {flex:1;min-width:0;}
+.actual-toolbar select {width:min(260px,36%);}
+.actual-entries {display:grid;gap:12px;}
+.actual-entry {display:grid;grid-template-columns:minmax(170px,1.4fr) minmax(210px,1fr) auto;gap:13px;align-items:center;background:white;border:1px solid #e0e9f1;border-radius:12px;padding:17px;}
+.actual-entry > div:first-child {min-width:0;}
+.actual-entry > div:first-child b {font-size:14px;}
+.actual-entry > div:first-child small {display:block;margin-top:4px;}
+.actual-entry > div:first-child p {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.actual-entry-amounts {display:flex;gap:19px;}
+.actual-entry-amounts span {display:flex;flex-direction:column;gap:4px;color:#78889a;font-size:11px;}
+.actual-entry-amounts b {color:#21415b;font-size:13px;}
+.actual-edit-panel {grid-column:1/-1;border-top:1px solid #e2eaf0;padding-top:15px;display:grid;gap:10px;}
+.actual-edit-panel h3 {margin:0;}
+.actual-team-line {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:9px 11px;background:#f6f9fc;border-radius:8px;}
+.actual-team-line span {min-width:0;}
+.actual-team-line small {display:block;}
+.actual-team-line input {max-width:210px;min-width:115px;}
+.actual-edit-total {display:flex;justify-content:space-between;gap:15px;align-items:center;background:#eaf6f3;padding:12px;border-radius:8px;}
+.actual-edit-buttons {display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;}
+.actual-empty {padding:35px;text-align:center;color:#7b8ba2;}
+@media(max-width:900px){
+ .activity-form {grid-template-columns:1fr;}
+ .activity-form-card {grid-column:1/-1;}
+ .actual-entry {grid-template-columns:minmax(0,1fr) auto;}
+ .actual-entry-amounts {grid-column:1;}
+}
+@media(max-width:680px){
+ .activity-modal-backdrop {padding:0;z-index:65;}
+ .activity-modal {border-radius:0;max-height:100dvh;height:100dvh;width:100%;border:0;}
+ .activity-modal-header {padding:15px 17px;}
+ .activity-modal-header h2 {font-size:18px;}
+ .activity-modal-body {padding:13px;}
+ .activity-form-card {padding:15px 12px;}
+ .activity-form-grid {grid-template-columns:1fr;}
+ .activity-share-row {grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+ .activity-share-row > b {grid-column:1/-1;}
+ .activity-modal-footer {padding:12px 14px;}
+ .activity-modal-footer small {display:none;}
+ .activity-modal-footer > div {width:100%;justify-content:space-between;}
+ .activity-modal-footer .primary {flex:1;}
+ .actual-stats {grid-template-columns:repeat(2,minmax(0,1fr));}
+ .actual-stats > div:last-child {grid-column:1/-1;}
+ .actual-toolbar {flex-direction:column;}
+ .actual-toolbar .search,.actual-toolbar select {width:100%;}
+ .actual-entry {grid-template-columns:1fr;}
+ .actual-entry-amounts,.actual-edit-panel {grid-column:1;}
+ .actual-entry > button {justify-self:start;}
+ .actual-team-line input {max-width:140px;}
+ .actual-edit-buttons > button {flex:1;}
+}
