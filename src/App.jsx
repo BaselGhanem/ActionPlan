@@ -532,7 +532,10 @@ export function App() {
     }finally{setBusy(false);}
   }
   function openActivity(activity){setDraft(toTeamDraft(activity));}
-  const canEditActivity=activity=>Boolean(manager||activity.creator===(data?.profile.accountId||user?.uid));
+  const canEditActivity=activity=>Boolean(
+    manager || (activity.creator===(data?.profile.accountId||user?.uid) &&
+      (!data.visibilityHidden || activity.teamIds?.length===1))
+  );
   async function exportExcel() {
     setBusy(true);
     try {
@@ -589,7 +592,9 @@ export function App() {
       </main>
     );
   const oldDraft = data.activities.find((a) => a.id === draft?.id),
-    canEdit = draft && (manager || !draft.id || draft.creator === (data.profile.accountId || user.uid));
+    canEdit = draft && (manager || !draft.id ||
+      (draft.creator === (data.profile.accountId || user.uid) &&
+       (!data.visibilityHidden || oldDraft?.teamIds?.length===1)));
   return (
     <div className="app">
       <aside className={`sidebar ${nav ? `mobile-open` : ``}`}>
@@ -1596,6 +1601,7 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo, activityCount
             ? [
                 [`upload`, `رفع العملاء`],
                 [`users`, `المستخدمون`],
+                [`visibility`, `رؤية الفرق`],
               ]
             : []),
           [`types`, `أنواع الأنشطة`],
@@ -1609,6 +1615,28 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo, activityCount
           </button>
         ))}
       </div>
+      {tab === `visibility` && admin && (
+        <section className="surface team-visibility-panel">
+          <h3>صلاحيات عرض بيانات الفرق الأخرى</h3>
+          <p>يمكنك ضبط رؤية كل فريق بشكل مستقل. عند إيقاف العرض، يقتصر دليل العملاء وقوائم الأنشطة على بيانات الفريق والأطباء المشتركين فيه، ويظل اختيار الطبيب المشترك وتوزيع ميزانية فريقه متاحاً.</p>
+          <p className="team-visibility-caveat">ملاحظة أمنية: يمنع Firestore قراءة العملاء والأنشطة غير المشتركة عند الإخفاء، لكن البيانات المحاسبية المجمعة موجودة حالياً في مستند Finance مشترك. لذلك هذا ليس عزلاً مالياً كاملاً للفرق، ويحتاج إعادة تصميم تخزين الميزانيات قبل اعتبار كل بيانات الفرق سرية.</p>
+          <div className="team-visibility-list">
+            {data.teams.map(t=>{
+              const enabled=data.teamVisibility?.find(v=>v.id===t.id)?.showOtherTeams!==false;
+              return <label className="team-visibility-row" key={t.id}>
+                <span><b>{t.name}</b><small>{enabled?"يمكنه مشاهدة القوائم والأنشطة من الفرق الأخرى":"تظهر له بيانات فريقه والأطباء المشتركين فقط"}</small></span>
+                <span className="team-visibility-control">
+                  <input type="checkbox" checked={enabled} disabled={busy||isDemo}
+                    onChange={e=>run(async()=>{
+                      await perform("saveTeamVisibility",{teamId:t.id,showOtherTeams:e.target.checked},"تم تحديث عرض الفرق");
+                    })}/>
+                  {enabled?"عرض الفرق الأخرى":"إخفاء الفرق الأخرى"}
+                </span>
+              </label>;
+            })}
+          </div>
+        </section>
+      )}
       {tab === `teams` && (
         <div className="admin-columns">
           <section className="surface">
