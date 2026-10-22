@@ -110,6 +110,11 @@ test(`schema 3 shared activity commits only team allocations and actual is saved
  assert.equal((await getDoc(doc(db(),`finance/2027`))).data().teams.t1.used,3000);
 });
 test(`schema 3 cannot allocate to unrelated team or forge aggregate totals`,async()=>{
+ await env.withSecurityRulesDisabled(async context=>{
+  await updateDoc(doc(context.firestore(),`customers/C0`),{
+   visitingTeams:[`t0`],visits:{t0:{roster:`r0`,classification:`A`}},
+  });
+ });
  const activity={
   type:`ندوة`,total:10000,actual:null,status:`planned`,date:``,notes:``,
   clients:[{code:`C0`,name:`طبيب 0`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
