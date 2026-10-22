@@ -1242,98 +1242,75 @@ function TeamTable({ teams, dashboard = false }) {
     </div>
   );
 }
-function Activities({ data, onOpen, activityCounts, customerKinds }) {
-  const [q, setQ] = useState(``),
-    [status, setStatus] = useState(``);
-  const rows = data.activities.filter(
-    (a) =>
-      (!status || a.status === status) &&
-      (!q ||
-        `${a.type} ${a.clients.map((c) => c.name).join(` `)} ${a.id}`.includes(
-          q,
-        )),
-  );
-  return (
-    <>
-      <div className="section-heading">
-        <div>
-          <h2>سجل الأنشطة</h2>
-          <p>يمكن للجميع استعراض التفاصيل، والتعديل لمنشئ النشاط والإدارة</p>
-        </div>
-        <span className="count">{rows.length}</span>
-      </div>
-      <div className="inline-filters">
-        <input
-          placeholder="ابحث عن نشاط أو عميل"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">جميع الحالات</option>
-          {Object.entries(statusText).filter(([key]) =>
-            key === status || data.activities.some(a =>
-              a.status === key && (!q ||
-                `${a.type} ${a.clients.map(c => c.name).join(` `)} ${a.id}`.includes(q)),
-            )).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v}
-            </option>
-          ))}
-        </select>
-      </div>
-      <section className="surface">
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>النشاط</th>
-                <th>العملاء</th>
-                <th>التوقيت</th>
-                <th>المخطط USD</th>
-                <th>الفعلي USD</th>
-                <th>الحالة</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows
-                .sort((a, b) => b.createdAt - a.createdAt)
-                .map((a) => (
-                  <tr key={a.id}>
-                    <td>
-                      <b>{a.type}</b>
-                      <small className="row-sub code">{a.id.slice(-8)}</small>
-                    </td>
-                    <td className="activity-client-names">
-                      {a.clients.map((c, index) => (
-                        <React.Fragment key={`${a.id}-${c.code}`}>
-                          {index > 0 && <span>، </span>}
-                          <ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} />
-                        </React.Fragment>
-                      ))}
-                    </td>
-                    <td>{a.date || `غير مجدول`}</td>
-                    <td className="numeric">{money(a.total)}</td>
-                    <td className="numeric">
-                      {a.actual === null ? `—` : money(a.actual)}
-                    </td>
-                    <td>
-                      <Badge status={a.status} />
-                    </td>
-                    <td>
-                      <button className="text-button" onClick={() => onOpen(a)}>
-                        عرض التفاصيل
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-        {!rows.length && <Empty text="لا توجد أنشطة مطابقة" />}
-      </section>
-    </>
-  );
+
+function Activities({ data,onOpen,activityCounts,customerKinds }){
+ const [f,setF]=useState({search:"",team:data.visibilityHidden?data.profile.teamId:"",specialty:"",area:"",classification:"",type:"",status:""});
+ useEffect(()=>{
+  if(data.visibilityHidden&&data.teams.length===1)setF(prev=>prev.team===data.profile.teamId?prev:{...prev,team:data.profile.teamId,classification:""});
+ },[data.visibilityHidden,data.profile.teamId,data.teams.length]);
+ const options=get=>[...new Set(data.activities.flatMap(get).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),"ar"));
+ const roster=new Map(data.rosters.map(r=>[r.teamId,new Map(r.rows.map(c=>[String(c.code),c.classification||""]))]));
+ const rows=data.activities.filter(a=>{
+  const clients=a.clients||[];
+  if(f.team&&!a.teamIds?.includes(f.team))return false;
+  if(f.status&&a.status!==f.status)return false;
+  if(f.type&&a.type!==f.type)return false;
+  if(f.specialty&&!clients.some(c=>c.specialty===f.specialty))return false;
+  if(f.area&&!clients.some(c=>c.area===f.area))return false;
+  if(f.classification&&(!f.team||!clients.some(c=>roster.get(f.team)?.get(String(c.code))===f.classification)))return false;
+  const q=f.search.trim().toLocaleLowerCase();
+  if(q&&!`${a.type} ${a.id} ${a.creatorTeamName||""} ${clients.map(c=>c.name+" "+c.code).join(" ")}`.toLocaleLowerCase().includes(q))return false;
+  return true;
+ }).sort((a,b)=>Number(b.createdAt?.seconds||b.createdAt||0)-Number(a.createdAt?.seconds||a.createdAt||0));
+ const target=data.profile.role==="team"?data.profile.teamId:f.team;
+ const choose=(key,value)=>setF(o=>({...o,[key]:value,...(key==="team"?{classification:""}:{})}));
+ return <>
+  <div className="section-heading"><div><h2>سجل الأنشطة</h2><p>اعرف إجمالي النشاط وحصة فريقك والفلاتر المعتادة</p></div><span className="count">{rows.length}</span></div>
+  <div className="activity-ledger-filters">
+   <label className="search"><MagnifyingGlass size={18}/><input placeholder="ابحث بالنشاط أو العميل أو الفريق" value={f.search} onChange={e=>choose("search",e.target.value)}/></label>
+   <select aria-label="فلتر الفريق" value={f.team} onChange={e=>choose("team",e.target.value)}>
+    {!data.visibilityHidden&&<option value="">جميع الفرق</option>}
+    {data.teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+   </select>
+   <select aria-label="فلتر التخصص" value={f.specialty} onChange={e=>choose("specialty",e.target.value)}>
+    <option value="">جميع التخصصات</option>{options(a=>a.clients.map(c=>c.specialty||"")).map(v=><option key={v}>{v}</option>)}
+   </select>
+   <select aria-label="فلتر المنطقة" value={f.area} onChange={e=>choose("area",e.target.value)}>
+    <option value="">جميع المناطق</option>{options(a=>a.clients.map(c=>c.area||"")).map(v=><option key={v}>{v}</option>)}
+   </select>
+   <select aria-label="فلتر التصنيف" value={f.classification} disabled={!f.team} onChange={e=>choose("classification",e.target.value)}>
+    <option value="">{f.team?"جميع التصنيفات":"اختر فريقا أولا"}</option>
+    {[...new Set([...(roster.get(f.team)?.values()||[])])].filter(Boolean).sort().map(x=><option key={x}>{x}</option>)}
+   </select>
+   <select aria-label="فلتر نوع النشاط" value={f.type} onChange={e=>choose("type",e.target.value)}>
+    <option value="">كل الأنشطة</option>{options(a=>[a.type]).map(t=><option key={t}>{t}</option>)}
+   </select>
+   <select aria-label="فلتر الحالة" value={f.status} onChange={e=>choose("status",e.target.value)}>
+    <option value="">كل الحالات</option>{Object.entries(statusText).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+   </select>
+   <button type="button" className="text-button" onClick={()=>setF({search:"",team:data.visibilityHidden?data.profile.teamId:"",specialty:"",area:"",classification:"",type:"",status:""})}>مسح الفلاتر</button>
+  </div>
+  <section className="surface"><div className="table-wrap"><table>
+   <thead><tr><th>النشاط / الفريق المنشئ</th><th>العملاء</th><th>التاريخ</th><th>إجمالي النشاط USD</th>
+    {target&&<th>حصة الفريق USD</th>}<th>الفعلي الإجمالي USD</th>{target&&<th>فعلي حصة الفريق USD</th>}<th>الحالة</th><th></th>
+   </tr></thead>
+   <tbody>{rows.map(a=>{
+    const share=target?a.teamShares?.find(s=>s.teamId===target):null;
+    return <tr key={a.id}>
+     <td><b>{a.type}</b><small className="row-sub">{a.creatorTeamName||"الإدارة"} • {a.id.slice(-8)}</small></td>
+     <td className="activity-client-names">{a.clients.map((c,i)=><React.Fragment key={`${a.id}-${c.code}`}>
+      {i>0&&<span>، </span>}<ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds}/>
+     </React.Fragment>)}</td>
+     <td>{a.date||"غير مجدول"}</td><td className="numeric">{money(a.total)}</td>
+     {target&&<td className="numeric"><b>{share?money(share.amount):"—"}</b></td>}
+     <td className="numeric">{a.actual===null?"—":money(a.actual)}</td>
+     {target&&<td className="numeric">{share?.actual==null?"—":money(share.actual)}</td>}
+     <td><Badge status={a.status}/></td>
+     <td><button type="button" className="text-button" onClick={()=>onOpen(a)}>تفاصيل</button></td>
+    </tr>;
+   })}</tbody>
+  </table></div>{!rows.length&&<Empty text="لا توجد أنشطة تطابق الفلاتر"/>}</section>
+ </>;
 }
 function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
   const [view, setView] = useState(`teams`),
