@@ -42,7 +42,7 @@ test(`Spark adapter: bootstrap, provisioning, imports, distribution, reset and o
  data=await request(`load`);assert.equal(data.profile.accountId,oldUser.accountId);
  await request(`saveActivity`,{...d,id:a,notes:`التعديل بعد إعادة كلمة المرور`});
  await signOut(auth);await signInWithEmailAndPassword(auth,email,pass);
- const modern={id:a,type:d.type,total:10000,actual:null,status:`planned`,date:`2027-05-14`,notes:`ترحيل توزيع الفريق`,
+ const modern={id:a,type:d.type,total:10000,actual:null,status:`planned`,date:``,notes:`توزيع فرق`,
   clients:[{code:`001`,name:`الاسم المعتمد الأخير`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
   teamShares:[{teamId:t1,amount:6500,actual:null},{teamId:t2,amount:3500,actual:null}]};
  assert.equal((await request(`load`)).profile.role,`admin`);
