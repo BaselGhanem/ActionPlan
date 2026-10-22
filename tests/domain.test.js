@@ -148,3 +148,43 @@ test("cost-first honorarium plus lunch calculates activity total and distributes
  a=withCostBreakdown(a,a.costItems.map(x=>x.id==="lunch"?{...x,amount:40000}:x));
  assert.deepEqual(a.teamShares.map(s=>s.amount),[70000,70000]);assert.equal(a.total,140000);
 });
+
+test("optional doctor Honorarium automatically splits equally, allows 1000/1000/500 and does not charge teams twice", async () => {
+ const {equalHonorariumShares,withHonorariumParticipants,withCostBreakdown,honorariumTotal,validateHonorariumShares}=await import("../src/data/cost-items.js");
+ const doctors=["001","002","003"].map(code=>({code,name:"Doctor "+code,kind:"طبيب"}));
+ const rows=[
+  {id:"honor",category:"client",label:"Honorarium",amount:250000},
+  {id:"meal",category:"meal",label:"Lunch",amount:50000},
+ ];
+ let a={type:"ندوة",status:"planned",total:300000,actual:null,date:"",notes:"",
+  clients:doctors,teamShares:[{teamId:"A",amount:150000,actual:null},{teamId:"B",amount:150000,actual:null}],costItems:rows,
+  honorariumShares:[],
+ };
+ // Default OFF. Once switched on, every doctor gets an equal share.
+ assert.doesNotThrow(()=>validateActivity(a));
+ assert.equal(honorariumTotal(rows),250000);
+ a={...a,honorariumShares:equalHonorariumShares(doctors,250000)};
+ assert.deepEqual(a.honorariumShares.map(x=>x.amount),[83334,83333,83333]);
+ assert.doesNotThrow(()=>validateActivity(a));
+ // User edits the individual planned Honorarium costs.
+ a={...a,honorariumShares:[{code:"001",amount:100000},{code:"002",amount:100000},{code:"003",amount:50000}]};
+ assert.doesNotThrow(()=>validateActivity(a));
+ assert.deepEqual(charges(a),{A:150000,B:150000}); // no extra budget deduction
+ assert.throws(()=>validateActivity({...a,honorariumShares:[{code:"001",amount:100000},{code:"002",amount:100000},{code:"003",amount:60000}]}),/لا يطابق/);
+ assert.throws(()=>validateActivity({...a,honorariumShares:[{code:"999",amount:250000}]}),/غير صحيح/);
+ assert.throws(()=>validateActivity({...a,honorariumShares:[{code:"001",amount:100000},{code:"001",amount:150000}]}),/مكررا/);
+ // Changes to hospitality preserve custom Honorarium shares.
+ a=withCostBreakdown(a,[rows[0],{...rows[1],amount:60000}]);
+ assert.deepEqual(a.honorariumShares.map(x=>x.amount),[100000,100000,50000]);
+ assert.deepEqual(a.teamShares.map(x=>x.amount),[155000,155000]);
+ // Changing Honorarium resets optional distribution to equal.
+ a=withCostBreakdown(a,[{...rows[0],amount:300000},{...rows[1],amount:60000}]);
+ assert.deepEqual(a.honorariumShares.map(x=>x.amount),[100000,100000,100000]);
+ assert.doesNotThrow(()=>validateActivity(a));
+ // Adding or removing a doctor automatically reconciles the enabled detail.
+ a=withHonorariumParticipants(a,doctors.slice(0,2));
+ assert.deepEqual(a.honorariumShares.map(x=>x.amount),[150000,150000]);
+ assert.doesNotThrow(()=>validateActivity(a));
+ a={...a,honorariumShares:[]}; // optional OFF again
+ assert.doesNotThrow(()=>validateActivity(a));
+});

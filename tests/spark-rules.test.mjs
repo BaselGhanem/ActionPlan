@@ -173,3 +173,33 @@ test("Firestore rejects tampered item sums and invalid cost categories",async()=
  await assertFails(persist(db(),"bad-cost-kind",a,{tamper:x=>({...x,costItems:[{...x.costItems[0],category:"unapproved"}]})}));
  await assertFails(persist(db(),"bad-cost-label",a,{tamper:x=>({...x,costItems:[{...x.costItems[0],label:""}]})}));
 });
+
+test("optional per-doctor Honorarium share is saved and reconciled separately from team charges",async()=>{
+ const participants=["C0","C1","C2"].map(code=>({
+  code,name:"طبيب "+code,kind:"طبيب",specialty:"قلب",area:"عمان",
+ }));
+ const activity={
+  type:"ندوة",status:"planned",date:"2027-07-14",total:30000,actual:null,notes:"",
+  clients:participants,
+  teamShares:[{teamId:"t0",amount:15000,actual:null},{teamId:"t1",amount:15000,actual:null}],
+  costItems:[{id:"honor",category:"client",label:"Honorarium",amount:25000},
+    {id:"lunch",category:"meal",label:"Lunch",amount:5000}],
+  honorariumShares:[{code:"C0",amount:10000},{code:"C1",amount:10000},{code:"C2",amount:5000}],
+ };
+ await assertSucceeds(persist(db(),"honorarium-split",activity));
+ const saved=(await getDoc(doc(db(),"activities/honorarium-split"))).data();
+ assert.deepEqual(saved.honorariumShares,{C0:10000,C1:10000,C2:5000});
+ assert.equal(saved.total,30000);
+ assert.equal((await getDoc(doc(db(),"finance/2027"))).data().teams.t0.used,15000);
+ const decoded=decodeActivity("honorarium-split",saved);
+ assert.deepEqual(decoded.honorariumShares.map(x=>x.amount),[10000,10000,5000]);
+ await assertFails(persist(db(),"honorarium-forged",activity,{
+  tamper:body=>({...body,honorariumShares:{C0:20000,C1:10000,C2:5000}}),
+ }));
+ await assertFails(persist(db(),"honorarium-outsider",activity,{
+  tamper:body=>({...body,honorariumShares:{C0:10000,C1:10000,"C999":5000}}),
+ }));
+ await assertFails(persist(db(),"honorarium-negative",activity,{
+  tamper:body=>({...body,honorariumShares:{C0:-5000,C1:15000,C2:15000}}),
+ }));
+});

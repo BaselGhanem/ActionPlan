@@ -32,9 +32,11 @@ test(`Spark adapter: bootstrap, provisioning, imports, distribution, reset and o
  const earlyModern={id:null,type:d.type,status:`planned`,total:10000,actual:null,date:`2027-05-14`,notes:`initial conversion`,
   clients:[{code:`001`,name:`الاسم المعتمد الأخير`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
   teamShares:[{teamId:t1,amount:6500,actual:null},{teamId:t2,amount:3500,actual:null}],
-  costItems:[{id:`demo-client`,category:`client`,label:`تكلفة مرتبطة بالعميل`,amount:7000},{id:`demo-meal`,category:`meal`,label:`غداء`,amount:3000}]};
+  costItems:[{id:`demo-client`,category:`client`,label:`تكلفة مرتبطة بالعميل`,amount:7000},{id:`demo-meal`,category:`meal`,label:`غداء`,amount:3000}],
+  honorariumShares:[{code:`001`,amount:7000}]};
  const trial=(await request(`saveActivity`,earlyModern)).id;
  assert.equal((await request(`load`)).activities.find(x=>x.id===trial).costItems.length,2);
+ assert.equal((await request(`load`)).activities.find(x=>x.id===trial).honorariumShares[0].amount,7000);
  await request(`deleteActivity`,{id:trial});
  await signOut(auth);await signInWithEmailAndPassword(auth,email,pass);
  await request(`updateUser`,{id:oldUser.id,password:`NewLocal-Password-43`,active:true});assert.equal(auth.currentUser.uid,admin.uid);
