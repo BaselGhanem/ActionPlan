@@ -273,7 +273,7 @@ service cloud.firestore {
    allow update: if (request.resource.data.mutation.kind in ['saveActivity','deleteActivity'] && activityFinance()) || metadataFinance() || importFinance() || archiveFinance();
   }
   match /activities/{activityId} {
-   allow read: if active();
+   allow read: if active() && (!teamVisibilityRestricted() || resource.data.teamIds.hasAny([user().teamId]));
    allow create: if commitActivity(request.resource.data,null,activityId) && receipt(request.resource.data,activityId,null);
    allow update: if (commitActivity(request.resource.data,resource.data,activityId) ||
     (active() && request.resource.data.status == 'deleted' && resource.data.status == 'planned' && resource.data.actual == null &&
@@ -281,7 +281,7 @@ service cloud.firestore {
    allow delete: if false;
   }
   match /customers/{code} {
-    allow read: if active();
+    allow read: if active() && (!teamVisibilityRestricted() || resource.data.visitingTeams.hasAny([user().teamId]));
     allow create: if admin() && fAfter().mutation.kind == 'importChunk' &&
      fAfter().rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1;
     allow update: if (admin() && fAfter().mutation.kind == 'importChunk' &&
@@ -290,6 +290,23 @@ service cloud.firestore {
     allow delete: if false;
    }
 
+  function teamVisibilityRestricted() {
+   let p=user();
+   let teamId=p.get('teamId','');
+   let path=/databases/$(database)/documents/teamVisibility/$(teamId);
+   return p.role == 'team' && exists(path) && get(path).data.get('showOtherTeams',true) == false;
+  }
+  match /teamVisibility/{teamId} {
+   allow get: if admin() || (active() && user().role == 'team' && user().teamId == teamId);
+   allow list: if admin();
+   allow create,update: if admin() && request.resource.data.keys().hasOnly(['showOtherTeams','updatedBy','updatedAt']) &&
+    request.resource.data.keys().hasAll(['showOtherTeams','updatedBy','updatedAt']) &&
+    request.resource.data.showOtherTeams is bool &&
+    request.resource.data.updatedBy == request.auth.uid &&
+    request.resource.data.updatedAt == request.time &&
+    fAfter().teams.keys().hasAny([teamId]);
+   allow delete: if false;
+  }
   function standaloneAccess(t) {
    return manager() || (active() && user().role == 'team' && user().teamId == t);
   }
