@@ -135,3 +135,13 @@ test(`schema 2 activity upgrades to team-only schema 3 without losing totals`,as
  const saved=(await getDoc(doc(db(),`activities/upgrade`))).data();
  assert.equal(saved.schema,3);assert.equal(saved.rev,2);assert.equal(saved.totals.t0,6500);
 });
+
+test(`admin upgrades an activity from a team owner without changing creator`,async()=>{
+ await persist(db(),`cross-owner`,draft());
+ const next={
+  type:`ندوة`,total:10000,actual:null,status:`planned`,date:`2027-05-14`,notes:`converted`,
+  clients:[{code:`C0`,name:`طبيب 0`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
+  teamShares:[{teamId:`t0`,amount:6500,actual:null},{teamId:`t1`,amount:3500,actual:null}],
+ };
+ await assertSucceeds(persist(db(`admin`),`cross-owner`,next,{uid:`admin`,accountId:`admin`}));
+});
