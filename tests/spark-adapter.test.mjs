@@ -40,6 +40,7 @@ test(`Spark adapter: bootstrap, provisioning, imports, distribution, reset and o
  const modern={id:a,type:d.type,total:10000,actual:null,status:`planned`,date:`2027-05-14`,notes:`ترحيل توزيع الفريق`,
   clients:[{code:`001`,name:`الاسم المعتمد الأخير`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
   teamShares:[{teamId:t1,amount:6500,actual:null},{teamId:t2,amount:3500,actual:null}]};
+ console.log(`Phase: legacy-to-team-only`);
  await request(`saveActivity`,modern);
  data=await request(`load`);
  assert.equal(data.activities.find(x=>x.id===a).schema,3);
