@@ -3,6 +3,7 @@ import {getAuth,initializeAuth,inMemoryPersistence,createUserWithEmailAndPasswor
 import {getFirestore,doc,getDoc,getDocFromServer,getDocs,collection,query,where,orderBy,limit,runTransaction,writeBatch,setDoc,serverTimestamp,connectFirestoreEmulator} from 'firebase/firestore';
 import {fail,validateActivity} from './data/domain.js';
 import {prepareProofs} from './data/proofs.js';
+import {visibleStandaloneGroups,eligibleDoctor,STANDALONE_CAMPAIGNS} from './data/standalone.js';
 import {encodeActivity,encodeTeamActivity,decodeActivity,tombstone,wireCharges,activeVisit} from './data/activity-wire.js';
 const localTests=typeof process!==`undefined`&&process.env.ACTIONPLAN_EMULATORS===`1`;
 const bootstrapAdminUid=`QrAqmjHZLTWxyEg3SJX11SgBgX33`;
@@ -44,9 +45,15 @@ export async function resolveLogin(username){const name=username.trim().toLowerC
 async function load(){const p=await profile();let f=await getDoc(financeRef);if(!f.exists()&&p.role===`admin`){await runTransaction(db,async tx=>{const s=await tx.get(financeRef);if(!s.exists())tx.set(financeRef,{teams:{},types:[`ندوة علمية`,`مؤتمر طبي`,`اجتماع علمي`,`ورشة عمل`],mutation:null,rosterEpoch:0,pausedTeams:[],uploads:{}});});f=await getDoc(financeRef);}
  fail(f.exists(),`يجب أن يدخل Admin أولا لتهيئة ميزانيات 2027`);
  const financial=f.data(),teams=Object.entries(financial.teams).map(([id,t])=>({id,...t,uploading:financial.pausedTeams?.includes(id)||false}));
- const [c,a,u]=await Promise.all([getDocs(collection(db,`customers`)),getDocs(query(collection(db,`activities`),where(`year`,`==`,2027))),p.role===`admin`?getDocs(collection(db,`users`)):null]);
+ const [c,a,u,quotas,choices]=await Promise.all([
+  getDocs(collection(db,`customers`)),
+  getDocs(query(collection(db,`activities`),where(`year`,`==`,2027))),
+  p.role===`admin`?getDocs(collection(db,`users`)):null,
+  p.role===`team`?getDocs(query(collection(db,`standaloneQuotas`),where(`teamId`,`==`,p.teamId))):getDocs(collection(db,`standaloneQuotas`)),
+  p.role===`team`?getDocs(query(collection(db,`standaloneChoices`),where(`teamId`,`==`,p.teamId))):getDocs(collection(db,`standaloneChoices`)),
+ ]);
  const customers=list(c).filter(c=>c.deleted!==true),rosters=teams.map(t=>({teamId:t.id,rows:customers.flatMap(c=>{const v=activeVisit(c,t.id,financial.teams);return v?[{...c,classification:v.classification}]:[]})}));
- return {profile:p,teams,customers,rosters,activities:list(a).filter(a=>a.status!==`deleted`).map(a=>decodeActivity(a.id,a,teams)),settings:{types:financial.types},users:u?list(u).filter(u=>u.current!==false):[]};}
+ return {profile:p,teams,customers,rosters,activities:list(a).filter(a=>a.status!==`deleted`).map(a=>decodeActivity(a.id,a,teams)),settings:{types:financial.types},users:u?list(u).filter(u=>u.current!==false):[],standalone:{quotas:list(quotas),choices:list(choices)}};}
 async function saveActivity(payload,deleting=false){const p=await profile(),activityId=payload.id||id(),r=doc(db,`activities/${activityId}`);
  const [initialFinance,initialActivity]=await Promise.all([getDoc(financeRef),getDoc(r)]);
  const preparedFinancial=initialFinance.data(),preparedOld=initialActivity.exists()?initialActivity.data():null;
@@ -115,7 +122,46 @@ async function archiveCustomers(payload){
  return {count:codes.length};
 }
 
-export async function request(op,payload={}){if(op===`load`)return load();if(op===`archiveCustomers`)return archiveCustomers(payload);if(op===`saveActivity`)return saveActivity(payload);if(op===`deleteActivity`)return saveActivity(payload,true);if(op===`saveTeam`)return saveTeam(payload);if(op===`createUser`)return provision(payload);if(op===`updateUser`)return updateUser(payload);
+
+async function initializeStandAlone(){
+ const p=await profile();admin(p);
+ const f=(await getDoc(financeRef)).data(),teams=Object.entries(f.teams).map(([id,t])=>({id,...t}));
+ const configs=visibleStandaloneGroups(teams,p);
+ fail(configs.length>0,"أضف فرق Azord وMatador وURO أولا");
+ for(const g of configs){
+  const ref=doc(db,`standaloneQuotas/${g.key}`);
+  await runTransaction(db,async tx=>{
+   const old=await tx.get(ref);
+   if(!old.exists())tx.set(ref,{campaign:g.id,teamId:g.teamId,limit:g.quota,count:0});
+  });
+ }
+ return {groups:configs.length};
+}
+async function chooseStandAlone({campaign,teamId,code,selected}){
+ const p=await profile();
+ const f=(await getDoc(financeRef)).data(),teams=Object.entries(f.teams).map(([id,t])=>({id,...t}));
+ const group=visibleStandaloneGroups(teams,p).find(g=>g.id===campaign&&g.teamId===teamId);
+ fail(group,"المسار أو الفريق غير مصرح به");
+ fail(typeof code==="string"&&code.length>0&&code.length<=100&&!code.includes("/"),"كود الطبيب غير صالح");
+ fail(typeof selected==="boolean","الاختيار غير صحيح");
+ const customerRef=doc(db,`customers/${encodeURIComponent(code)}`);
+ const quotaRef=doc(db,`standaloneQuotas/${group.key}`);
+ const choiceId=`${group.key}__${code}`,choiceRef=doc(db,`standaloneChoices/${choiceId}`);
+ await runTransaction(db,async tx=>{
+  const [q,choice,customer]=await Promise.all([tx.get(quotaRef),tx.get(choiceRef),tx.get(customerRef)]);
+  fail(q.exists(),"يجب أن يهيئ الأدمن حصص Stand Alone أولا");
+  fail(customer.exists()&&customer.data().deleted!==true&&eligibleDoctor(campaign,customer.data(),teamId),"الطبيب غير مدرج بفريقك أو غير مطابق للتخصص");
+  if(selected===choice.exists())return;
+  const next=q.data().count+(selected?1:-1);
+  fail(next>=0&&next<=q.data().limit,`الحد الأقصى لهذا الفريق: ${q.data().limit} طبيب`);
+  const mutation={kind:selected?"add":"remove",choiceId,actor:uid(),at:serverTimestamp()};
+  if(selected)tx.set(choiceRef,{campaign,teamId,code,actor:uid(),at:serverTimestamp()});
+  else tx.delete(choiceRef);
+  tx.update(quotaRef,{count:next,mutation});
+ });
+ return {selected};
+}
+export async function request(op,payload={}){if(op===`load`)return load();if(op===`standaloneInit`)return initializeStandAlone();if(op===`standaloneChoose`)return chooseStandAlone(payload);if(op===`archiveCustomers`)return archiveCustomers(payload);if(op===`saveActivity`)return saveActivity(payload);if(op===`deleteActivity`)return saveActivity(payload,true);if(op===`saveTeam`)return saveTeam(payload);if(op===`createUser`)return provision(payload);if(op===`updateUser`)return updateUser(payload);
  const p=await profile();
  if(op===`saveTypes`){manager(p);const types=[...new Set(payload.types.map(t=>clean(t)).filter(Boolean))];fail(types.length>0&&types.length<=200,`أدخل من نوع إلى 200 نوع`);await runTransaction(db,async tx=>{const f=await tx.get(financeRef);tx.update(financeRef,{types,mutation:{kind:`saveTypes`,uid:uid(),at:serverTimestamp()}});event(tx,`saveTypes`,{types:f.data().types},{types});});return {};}
  if(op===`audit`){manager(p);const s=await getDocs(query(collection(db,`audit`),orderBy(`at`,`desc`),limit(100)));return {rows:list(s).map(r=>({...r,action:r.kind,at:r.at?{_seconds:r.at.seconds}:null}))};}
