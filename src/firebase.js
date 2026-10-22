@@ -3,6 +3,7 @@ import {getAuth,initializeAuth,inMemoryPersistence,createUserWithEmailAndPasswor
 import {getFirestore,doc,getDoc,getDocFromServer,getDocs,collection,query,where,orderBy,limit,runTransaction,writeBatch,setDoc,serverTimestamp,connectFirestoreEmulator} from 'firebase/firestore';
 import {fail,validateActivity} from './data/domain.js';
 import {prepareProofs} from './data/proofs.js';
+import {readRosterCache,writeRosterCache,rosterCacheKey} from './data/customer-cache.js';
 import {visibleStandaloneGroups,eligibleDoctor,STANDALONE_CAMPAIGNS} from './data/standalone.js';
 import {encodeActivity,encodeTeamActivity,decodeActivity,tombstone,wireCharges,activeVisit} from './data/activity-wire.js';
 const localTests=typeof process!==`undefined`&&process.env.ACTIONPLAN_EMULATORS===`1`;
@@ -49,15 +50,19 @@ async function load(){const p=await profile();let f=await getDoc(financeRef);if(
  const limited=p.role==="team"&&ownVisibility?.exists()&&ownVisibility.data().showOtherTeams===false;
  const allTeams=Object.entries(financial.teams).map(([id,t])=>({id,...t,uploading:financial.pausedTeams?.includes(id)||false}));
  const teams=limited?allTeams.filter(t=>t.id===p.teamId):allTeams;
+ const cacheKey=rosterCacheKey({project:firebaseConfig.projectId,uid:uid(),teamId:p.teamId,restricted:limited,epoch:financial.rosterEpoch});
+ const cachedCustomers=await readRosterCache(cacheKey);
  const [c,a,u,quotas,choices,teamVisibility]=await Promise.all([
-  limited?getDocs(query(collection(db,`customers`),where(`visitingTeams`,`array-contains`,p.teamId))):getDocs(collection(db,`customers`)),
+  cachedCustomers?null:(limited?getDocs(query(collection(db,`customers`),where(`visitingTeams`,`array-contains`,p.teamId))):getDocs(collection(db,`customers`))),
   limited?getDocs(query(collection(db,`activities`),where(`teamIds`,`array-contains`,p.teamId))):getDocs(query(collection(db,`activities`),where(`year`,`==`,2027))),
   p.role===`admin`?getDocs(collection(db,`users`)):null,
   p.role===`team`?getDocs(query(collection(db,`standaloneQuotas`),where(`teamId`,`==`,p.teamId))):p.role===`admin`?getDocs(collection(db,`standaloneQuotas`)):null,
   p.role===`team`?getDocs(query(collection(db,`standaloneChoices`),where(`teamId`,`==`,p.teamId))):p.role===`admin`?getDocs(collection(db,`standaloneChoices`)):null,
   p.role===`admin`?getDocs(collection(db,`teamVisibility`)):null,
  ]);
- const customers=list(c).filter(c=>c.deleted!==true).map(c=>limited?{
+ const fetchedCustomers=c?list(c):cachedCustomers;
+ if(c)void writeRosterCache(cacheKey,JSON.parse(JSON.stringify(fetchedCustomers)));
+ const customers=fetchedCustomers.filter(c=>c.deleted!==true).map(c=>limited?{
   code:c.code,name:c.name,kind:c.kind,specialty:c.specialty,area:c.area,
   visitingTeams:[p.teamId],visits:{[p.teamId]:c.visits?.[p.teamId]},
  }:c);
