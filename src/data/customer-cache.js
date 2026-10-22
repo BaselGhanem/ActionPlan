@@ -14,10 +14,11 @@ async function transaction(mode,fn){
  const db=await openDB();if(!db)return null;
  return new Promise((resolve,reject)=>{
   const t=db.transaction(STORE,mode),store=t.objectStore(STORE);
+  let value;
   const r=fn(store);
-  r.onsuccess=()=>resolve(r.result);
-  r.onerror=()=>reject(r.error);
-  t.oncomplete=()=>db.close();
+  r.onsuccess=()=>{value=r.result;};
+  r.onerror=()=>{db.close();reject(r.error);};
+  t.oncomplete=()=>{db.close();resolve(value);};
   t.onerror=()=>{db.close();reject(t.error);};
  });
 }
