@@ -43,13 +43,41 @@ service cloud.firestore {
     fresh.hasOnly(customer.visitingTeams) && !fresh.hasAny(f.get('pausedTeams',[]));
   }
   function retainedClient(old,k) { return old != null && old.rows.keys().hasAny([k]); }
+
+  function validRow3(a,old,key){
+   let c=a.rows[key];
+   let customer=get(/databases/$(database)/documents/customers/$(key)).data;
+   let p=user();
+   return c.keys().hasOnly(['code','name','kind','specialty','area']) &&
+    c.keys().hasAll(['code','name','kind','specialty','area']) &&
+    c.code == customer.code && c.name is string && c.name.size() <= 200 &&
+    c.kind is string && c.specialty is string && c.area is string &&
+    (p.role != 'team' || retainedClient(old,key) || customer.visitingTeams.hasAny([p.teamId]));
+  }
+  function connectedClient(a,old,f,t,k){
+   let customer=get(/databases/$(database)/documents/customers/$(k)).data;
+   return visited(customer,t,f) ||
+    (old != null && old.teamIds.hasAny([t]) && old.clientKeys.hasAny([k]));
+  }
+  function validTotals3(a,old,f,t){
+   return validMoney(a.totals[t]) && validMoney(a.actualTotals[t]) &&
+    (a.actual != null || a.actualTotals[t] == 0) &&
+    ((a.clientKeys.size()>0 && connectedClient(a,old,f,t,a.clientKeys[0])) ||
+     (a.clientKeys.size()>1 && connectedClient(a,old,f,t,a.clientKeys[1])) ||
+     (a.clientKeys.size()>2 && connectedClient(a,old,f,t,a.clientKeys[2])) ||
+     (a.clientKeys.size()>3 && connectedClient(a,old,f,t,a.clientKeys[3])) ||
+     (a.clientKeys.size()>4 && connectedClient(a,old,f,t,a.clientKeys[4])) ||
+     (a.clientKeys.size()>5 && connectedClient(a,old,f,t,a.clientKeys[5])) ||
+     (a.clientKeys.size()>6 && connectedClient(a,old,f,t,a.clientKeys[6])) ||
+     (a.clientKeys.size()>7 && connectedClient(a,old,f,t,a.clientKeys[7])));
+  }
   function validTotals(a,t) { return a.totals[t] == sumPlans(a,t) && (a.actual == null || a.actualTotals[t] == sumSpent(a,t)); }
   function validActivity(a,old) {
    let f=fAfter();
    let p=user();
    let privileged=p.role in ['admin','manager'];
    return signed() && p.active && a.keys().hasOnly(['schema','proofId','year','creator','createdAt','updatedAt','editedBy','rev','status','type','total','actual','date','notes','teamIds','clientKeys','rows','totals','actualTotals']) &&
-    a.schema == 2 && a.year == 2027 && a.editedBy == request.auth.uid && a.updatedAt == 0 &&
+    a.schema in [2,3] && a.year == 2027 && a.editedBy == request.auth.uid && a.updatedAt == 0 &&
     a.createdAt is int && (old == null ? (a.creator == p.get('accountId',request.auth.uid) && a.rev == 1) : (a.creator == old.creator && a.createdAt == old.createdAt && a.rev == old.rev + 1)) &&
     (old == null || privileged || old.creator == p.get('accountId',request.auth.uid)) &&
     a.status in ['planned','executed','cancelled'] && (a.status != 'cancelled' || (old != null && privileged)) &&
@@ -124,11 +152,11 @@ service cloud.firestore {
    allow update,delete: if false;
    match /rows/{key} {
     allow read: if active();
-    allow create: if request.resource.data == {'ok':true} && proposalOwner(proposal(pid)) && baseCurrent(proposal(pid)) && proposal(pid).body.clientKeys.hasAny([key]) && proposal(pid).rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0) && validRow(proposal(pid).body,proposedOld(proposal(pid)),get(/databases/$(database)/documents/finance/2027).data,key);
+    allow create: if request.resource.data == {'ok':true} && proposalOwner(proposal(pid)) && baseCurrent(proposal(pid)) && proposal(pid).body.clientKeys.hasAny([key]) && proposal(pid).rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0) && (proposal(pid).body.schema == 3 ? validRow3(proposal(pid).body,proposedOld(proposal(pid)),key) : validRow(proposal(pid).body,proposedOld(proposal(pid)),get(/databases/$(database)/documents/finance/2027).data,key));
    }
    match /totals/{teamId} {
     allow read: if active();
-    allow create: if request.resource.data == {'ok':true} && proposalOwner(proposal(pid)) && proposal(pid).body.teamIds.hasAny([teamId]) && validTotals(proposal(pid).body,teamId);
+    allow create: if request.resource.data == {'ok':true} && proposalOwner(proposal(pid)) && proposal(pid).body.teamIds.hasAny([teamId]) && (proposal(pid).body.schema == 3 ? validTotals3(proposal(pid).body,proposedOld(proposal(pid)),get(/databases/$(database)/documents/finance/2027).data,teamId) : validTotals(proposal(pid).body,teamId));
    }
    match /checks/{kind} {
     allow read: if active();

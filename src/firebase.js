@@ -3,7 +3,7 @@ import {getAuth,initializeAuth,inMemoryPersistence,createUserWithEmailAndPasswor
 import {getFirestore,doc,getDoc,getDocFromServer,getDocs,collection,query,where,orderBy,limit,runTransaction,writeBatch,setDoc,serverTimestamp,connectFirestoreEmulator} from 'firebase/firestore';
 import {fail,validateActivity} from './data/domain.js';
 import {prepareProofs} from './data/proofs.js';
-import {encodeActivity,decodeActivity,tombstone,wireCharges,activeVisit} from './data/activity-wire.js';
+import {encodeActivity,encodeTeamActivity,decodeActivity,tombstone,wireCharges,activeVisit} from './data/activity-wire.js';
 const localTests=typeof process!==`undefined`&&process.env.ACTIONPLAN_EMULATORS===`1`;
 const bootstrapAdminUid=`QrAqmjHZLTWxyEg3SJX11SgBgX33`;
 export const firebaseConfig={apiKey:`AIzaSyD2HgEyn6Y4AEeTZVxdw6Sg2-iAk4APK1A`,authDomain:`dadactionplan.firebaseapp.com`,projectId:localTests?`demo-actionplan`:`dadactionplan`,storageBucket:`dadactionplan.firebasestorage.app`,messagingSenderId:`83696158470`,appId:`1:83696158470:web:f67e808ad90fd8313b0087`,measurementId:`G-SVLF09EKE4`};
@@ -52,7 +52,7 @@ async function saveActivity(payload,deleting=false){const p=await profile(),acti
  const preparedFinancial=initialFinance.data(),preparedOld=initialActivity.exists()?initialActivity.data():null;
  let preparedNext=null;
  if(!deleting){
- preparedNext=encodeActivity(payload,{accountId:p.accountId,uid:uid(),previous:preparedOld});preparedNext.proofId=id();
+ preparedNext=Array.isArray(payload.teamShares)?encodeTeamActivity(payload,{accountId:p.accountId,uid:uid(),previous:preparedOld}):encodeActivity(payload,{accountId:p.accountId,uid:uid(),previous:preparedOld});preparedNext.proofId=id();
  const customers=await Promise.all(payload.clients.map(c=>getDoc(doc(db,`customers/${encodeURIComponent(c.code)}`))));
  payload.clients.forEach((c,i)=>{fail(customers[i].exists(),`العميل غير موجود`);for(const k of [`name`,`kind`,`specialty`,`area`])preparedNext.rows[encodeURIComponent(c.code)][k]=customers[i].data()[k]||``;});
  await prepareProofs(db,{...preparedNext,activityId},{owner:uid(),baseRev:preparedOld?.rev||0,rosterEpoch:preparedFinancial.rosterEpoch||0,proofId:preparedNext.proofId});
