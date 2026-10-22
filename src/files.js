@@ -164,6 +164,15 @@ export async function buildWorkbook(data) {
       ])),
     ],
     [
+      `Honorarium حسب الطبيب`,
+      [`رقم النشاط`,`نوع النشاط`,`كود الطبيب`,`اسم الطبيب`,`Honorarium المخطط USD`],
+      data.activities.flatMap(a=>(a.honorariumShares||[]).map(share=>[
+        a.id,a.type,share.code,
+        a.clients.find(c=>String(c.code)===String(share.code))?.name||share.code,
+        share.amount/100,
+      ])),
+    ],
+    [
       `المشاركون في الأنشطة`,
       [`رقم النشاط`,`نوع النشاط`,`كود العميل`,`العميل`,`التخصص`,`المنطقة`],
       data.activities.flatMap(a=>a.clients.map(c=>[

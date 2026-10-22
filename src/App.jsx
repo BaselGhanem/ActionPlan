@@ -40,6 +40,7 @@ import { auth, request, resolveLogin } from "./firebase";
 import { EMPTY_SPECIALTY, directoryKeys, reportKeys, matchingRows, facetOptions, selectedOptions } from "./data/cascading-filters";
 import { activityCountsByCustomer, isDoctorClient, hasCustomerActivity } from "./data/activity-presence";
 import { groupBySpecialty } from "./data/specialty-report";
+import {withHonorariumParticipants} from "./data/cost-items";
 import { TeamActivityDialog } from "./components/TeamActivityDialog";
 import { ActualTracking } from "./components/ActualTracking";
 import { demoData } from "./demo";
@@ -83,6 +84,7 @@ const defaultDraft = () => ({
   notes: ``,
   clients: [],
   teamShares: [],
+  honorariumShares: [],
   costItems: [
     {id:crypto.randomUUID(),category:"client",label:"Honorarium / أتعاب الأطباء",amount:0},
     {id:crypto.randomUUID(),category:"meal",label:"غداء / ضيافة",amount:0},
@@ -431,7 +433,7 @@ export function App() {
   function selectClient(c) {
     const current=draft||defaultDraft();
     if(current.clients.some(x=>x.code===c.code)){
-      setDraft({...current,clients:current.clients.filter(x=>x.code!==c.code)});
+      setDraft(withHonorariumParticipants(current,current.clients.filter(x=>x.code!==c.code)));
       return;
     }
     if(!manager&&!rosterMap.get(data.profile.teamId)?.has(c.code)){
@@ -448,7 +450,7 @@ export function App() {
         teamShares=next.map((s,i)=>({...s,amount:amounts[i]}));
       }
     }
-    setDraft({...current,clients:[...current.clients,{code:c.code,name:c.name,kind:c.kind||``,specialty:c.specialty||``,area:c.area||``}],teamShares});
+    setDraft(withHonorariumParticipants({...current,teamShares},[...current.clients,{code:c.code,name:c.name,kind:c.kind||``,specialty:c.specialty||``,area:c.area||``}]));
   }
   async function perform(op, payload, message) {
     if (isDemo) {
@@ -503,6 +505,7 @@ export function App() {
       })),
       teamShares:structuredClone(activity.teamShares||[]),
       costItems:structuredClone(activity.costItems||[]),
+      honorariumShares:structuredClone(activity.honorariumShares||[]),
     };
   }
   async function persistActivity(value,closeDialog=false) {

@@ -1,4 +1,4 @@
-import {validateCostItems} from "./cost-items.js";
+import {validateCostItems,validateHonorariumShares} from "./cost-items.js";
 export const fail = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -65,6 +65,7 @@ export function validateActivity(a) {
     `أدخل إجمالي النشاط`,
   );
   validateCostItems(a.costItems,a.total);
+  validateHonorariumShares(a);
   if(Array.isArray(a.teamShares)) validateTeamActivity(a);
   else {
   fail(
