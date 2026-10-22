@@ -343,7 +343,10 @@ service cloud.firestore {
    allow delete: if false;
   }
   match /standaloneChoices/{choiceId} {
-   allow get,list: if active() && (manager() || resource.data.teamId == user().get('teamId','_'));
+   // A transaction must be able to read a *missing* choice before creating it.
+   // Existing choices remain protected to the owning team or admin.
+   allow get: if active() && (resource == null || manager() || resource.data.teamId == user().get('teamId','_'));
+   allow list: if active() && (manager() || resource.data.teamId == user().get('teamId','_'));
    allow create: if standaloneAccess(request.resource.data.teamId) &&
     standaloneCampaign(request.resource.data.campaign,request.resource.data.teamId) &&
     choiceId == request.resource.data.campaign + '__' + request.resource.data.teamId + '__' + request.resource.data.code &&
