@@ -1,7 +1,7 @@
 import React from "react";
 import { X, Plus, FloppyDisk, SquaresFour, CheckCircle, Trash } from "@phosphor-icons/react";
 import { cents, equally, weighted } from "../data/domain.js";
-import { COST_CATEGORIES, costItemsTotal } from "../data/cost-items.js";
+import { COST_CATEGORIES, costItemsTotal, withCostBreakdown } from "../data/cost-items.js";
 const money = n => new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format((n||0)/100);
 const read = value => value===""?0:cents(value);
 export function TeamActivityDialog({ draft,setDraft,teams,types,eligible,canEdit,canCancel,busy,onClose,onSave,onDelete,onPick,renderName }) {
@@ -27,7 +27,7 @@ export function TeamActivityDialog({ draft,setDraft,teams,types,eligible,canEdit
  return <div className="activity-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
   <section className="activity-modal" role="dialog" aria-modal="true" aria-label={draft.id?"تعديل النشاط":"نشاط جديد"}>
    <header className="activity-modal-header">
-    <div><small>Dar Al Dawa • 2027</small><h2>{draft.id?"إدارة النشاط":"إنشاء نشاط جديد"}</h2><p>توزيع الميزانية والفعلي على الفرق فقط</p></div>
+    <div><small>Dar Al Dawa • 2027</small><h2>{draft.id?"إدارة النشاط":"إنشاء نشاط جديد"}</h2><p>أدخل Honorarium والضيافة أولاً، ثم تُحسب الميزانية وتُوزّع على الفرق تلقائياً</p></div>
     <button type="button" className="icon-button" onClick={onClose} aria-label="إغلاق"><X size={24}/></button>
    </header>
    <div className="activity-modal-body">
@@ -39,11 +39,14 @@ export function TeamActivityDialog({ draft,setDraft,teams,types,eligible,canEdit
         <option value="">اختر النوع</option>{[...new Set([...types,...(draft.type?[draft.type]:[])])].map(t=><option key={t}>{t}</option>)}
        </select></label>
        <label className="field"><span>تاريخ النشاط</span><input type="date" min="2027-01-01" max="2027-12-31" value={draft.date} onChange={e=>update({date:e.target.value})}/></label>
-       <label className="field"><span>الميزانية المخططة (USD)</span><input type="number" min="0" step=".01" dir="ltr" value={draft.total?draft.total/100:""}
-         onChange={e=>{try{let v=read(e.target.value);setDraft(d=>{
-          const allocations=equally(v,d.teamShares.length);
-          return {...d,total:v,teamShares:d.teamShares.map((s,i)=>({...s,amount:allocations[i]}))};
-         });}catch{}}}/></label>
+       <label className="field activity-derived-total"><span>إجمالي النشاط (USD)</span><input type="number" min="0" step=".01" dir="ltr"
+        readOnly={(draft.costItems||[]).length>0} value={draft.total?draft.total/100:""} placeholder="0.00"
+        onChange={e=>{if((draft.costItems||[]).length)return;try{const value=read(e.target.value);setDraft(d=>{
+          const distribution=equally(value,d.teamShares.length);
+          return {...d,total:value,teamShares:d.teamShares.map((s,i)=>({...s,amount:distribution[i]}))};
+        });}catch{}}}/>
+        {(draft.costItems||[]).length>0&&<small>يُحسب تلقائياً من بنود التكلفة</small>}
+       </label>
        <label className="field"><span>حالة النشاط</span><select value={draft.status} onChange={e=>update({status:e.target.value})}>
         <option value="planned">مخطط / قيد المتابعة</option><option value="executed">منفذ</option>
         {canCancel&&draft.id&&<option value="cancelled">ملغي</option>}
@@ -60,8 +63,48 @@ export function TeamActivityDialog({ draft,setDraft,teams,types,eligible,canEdit
       </div>
       {!draft.clients.length&&<p className="warning-text">اختر عميلا واحدا على الأقل</p>}
      </section>
+     <section className="activity-form-card activity-cost-card">
+      <div className="activity-form-heading">
+       <div>
+        <h3>03 / Honorarium وتفاصيل التكلفة</h3>
+        <p className="hint">اكتب قيمة الـ Honorarium والغداء أو أي بند آخر. الإجمالي يتحدث تلقائياً، والتوزيع على الفرق يتم بالتساوي.</p>
+       </div>
+       <button type="button" className="text-button" disabled={(draft.costItems||[]).length>=8}
+        onClick={()=>setDraft(d=>{
+         const current=d.costItems||[];
+         return withCostBreakdown(d,[...current,{id:crypto.randomUUID(),category:"other",label:"بند آخر",amount:0}]);
+        })}><Plus size={17}/> إضافة بند</button>
+      </div>
+      {(draft.costItems||[]).length ? (
+       <div className="activity-cost-list">
+        {draft.costItems.map(item=><div className="activity-cost-item" key={item.id}>
+         <label><span>نوع البند</span>
+          <select value={item.category} onChange={e=>{
+           const category=e.target.value;
+           setDraft(d=>withCostBreakdown(d,d.costItems.map(x=>x.id===item.id?{...x,category,label:COST_CATEGORIES.find(c=>c.value===category)?.label||"بند آخر"}:x)));
+          }}>{COST_CATEGORIES.map(k=><option value={k.value} key={k.value}>{k.label}</option>)}</select>
+         </label>
+         <label><span>وصف التكلفة</span><input maxLength={140} value={item.label} placeholder="وصف البند"
+          onChange={e=>setDraft(d=>withCostBreakdown(d,d.costItems.map(x=>x.id===item.id?{...x,label:e.target.value}:x)))}/></label>
+         <label><span>المخطط USD</span><input type="number" min="0.01" step=".01" dir="ltr"
+          value={item.amount?item.amount/100:""} placeholder="0.00" onChange={e=>{
+           try{
+            const amount=read(e.target.value);
+            setDraft(d=>withCostBreakdown(d,d.costItems.map(x=>x.id===item.id?{...x,amount}:x)));
+           }catch{/* invalid numeric input is rejected on save */}
+          }}/></label>
+         <button type="button" className="icon-button activity-cost-remove" title="حذف البند" aria-label="حذف بند التكلفة"
+          onClick={()=>setDraft(d=>withCostBreakdown(d,d.costItems.filter(x=>x.id!==item.id)))}><Trash size={17}/></button>
+        </div>)}
+        <div className={`activity-reconcile ${costItemsTotal(draft.costItems)===draft.total?"":"invalid"}`} aria-live="polite">
+         <CheckCircle size={17}/> مجموع تفاصيل التكلفة: <b dir="ltr">{money(costItemsTotal(draft.costItems))} USD</b>
+         <span>يوزع هذا المجموع على الفرق تلقائياً</span>
+        </div>
+       </div>
+      ):<p className="activity-cost-placeholder">التفاصيل اختيارية. أضف بندين مثلاً: تكلفة مرتبطة بالعميل 1,000 وغداء 500 من إجمالي 1,500</p>}
+     </section>
      <section className="activity-form-card">
-      <div className="activity-form-heading"><h3>03 / الميزانية موزعة على الفرق</h3><button type="button" className="text-button" onClick={()=>distribute("amount")} disabled={!shares.length}><SquaresFour size={17}/> توزيع بالتساوي</button></div>
+      <div className="activity-form-heading"><h3>04 / توزيع إجمالي النشاط على الفرق</h3><button type="button" className="text-button" onClick={()=>distribute("amount")} disabled={!shares.length}><SquaresFour size={17}/> توزيع بالتساوي</button></div>
       <div className="activity-team-options">{availableTeams.map(t=><label key={t.id} className="check-line"><input type="checkbox" checked={shares.some(s=>s.teamId===t.id)} onChange={()=>chooseTeam(t)}/>{t.name}</label>)}</div>
       <div className="activity-share-grid">
        {shares.map(s=><div className="activity-share-row" key={s.teamId}>
@@ -71,46 +114,6 @@ export function TeamActivityDialog({ draft,setDraft,teams,types,eligible,canEdit
        </div>)}
       </div>
       <div className={`activity-reconcile ${planned===draft.total?"":"invalid"}`}><CheckCircle size={17}/> حصص الفرق: <b dir="ltr">{money(planned)} USD</b><span>الفرق: {money(draft.total-planned)} USD</span></div>
-     </section>
-     <section className="activity-form-card activity-cost-card">
-      <div className="activity-form-heading">
-       <div>
-        <h3>04 / تفاصيل تكلفة النشاط</h3>
-        <p className="hint">هذه تفاصيل الغرض من التكلفة؛ لا تعني توزيع أموال على الأطباء، ولا تخصم من الميزانية مرة ثانية</p>
-       </div>
-       <button type="button" className="text-button" disabled={(draft.costItems||[]).length>=8}
-        onClick={()=>setDraft(d=>{
-         const current=d.costItems||[],remaining=Math.max(0,d.total-costItemsTotal(current));
-         return {...d,costItems:[...current,{id:crypto.randomUUID(),category:"client",label:"تكلفة مرتبطة بالعميل",amount:remaining}]};
-        })}><Plus size={17}/> إضافة بند</button>
-      </div>
-      {(draft.costItems||[]).length ? (
-       <div className="activity-cost-list">
-        {draft.costItems.map(item=><div className="activity-cost-item" key={item.id}>
-         <label><span>نوع البند</span>
-          <select value={item.category} onChange={e=>{
-           const category=e.target.value;
-           setDraft(d=>({...d,costItems:d.costItems.map(x=>x.id===item.id?{...x,category,label:COST_CATEGORIES.find(c=>c.value===category)?.label||"بند آخر"}:x)}));
-          }}>{COST_CATEGORIES.map(k=><option value={k.value} key={k.value}>{k.label}</option>)}</select>
-         </label>
-         <label><span>وصف التكلفة</span><input maxLength={140} value={item.label} placeholder="وصف البند"
-          onChange={e=>setDraft(d=>({...d,costItems:d.costItems.map(x=>x.id===item.id?{...x,label:e.target.value}:x)}))}/></label>
-         <label><span>المخطط USD</span><input type="number" min="0.01" step=".01" dir="ltr"
-          value={item.amount/100} onChange={e=>{
-           try{
-            const amount=read(e.target.value);
-            setDraft(d=>({...d,costItems:d.costItems.map(x=>x.id===item.id?{...x,amount}:x)}));
-           }catch{/* invalid numeric input is rejected on save */}
-          }}/></label>
-         <button type="button" className="icon-button activity-cost-remove" title="حذف البند" aria-label="حذف بند التكلفة"
-          onClick={()=>setDraft(d=>({...d,costItems:d.costItems.filter(x=>x.id!==item.id)}))}><Trash size={17}/></button>
-        </div>)}
-        <div className={`activity-reconcile ${costItemsTotal(draft.costItems)===draft.total?"":"invalid"}`} aria-live="polite">
-         <CheckCircle size={17}/> مجموع تفاصيل التكلفة: <b dir="ltr">{money(costItemsTotal(draft.costItems))} USD</b>
-         <span>الفرق عن الإجمالي: <b dir="ltr">{money(draft.total-costItemsTotal(draft.costItems))} USD</b></span>
-        </div>
-       </div>
-      ):<p className="activity-cost-placeholder">التفاصيل اختيارية. أضف بندين مثلاً: تكلفة مرتبطة بالعميل 1,000 وغداء 500 من إجمالي 1,500</p>}
      </section>
      <section className="activity-form-card">
       <div className="activity-form-heading"><h3>05 / الفعلي والمتابعة</h3><button className="text-button" type="button" disabled={draft.actual===null||!shares.length} onClick={()=>distribute("actual")}>توزيع فعلي بنسبة المخطط</button></div>

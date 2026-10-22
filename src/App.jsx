@@ -83,7 +83,10 @@ const defaultDraft = () => ({
   notes: ``,
   clients: [],
   teamShares: [],
-  costItems: [],
+  costItems: [
+    {id:crypto.randomUUID(),category:"client",label:"Honorarium / أتعاب الأطباء",amount:0},
+    {id:crypto.randomUUID(),category:"meal",label:"غداء / ضيافة",amount:0},
+  ],
 });
 /** A single activity indicator used wherever the doctor is named. */
 function ClientName({ client, activityCounts, customerKinds }) {
@@ -504,17 +507,18 @@ export function App() {
   }
   async function persistActivity(value,closeDialog=false) {
     try{
-      validateActivity(value);
+      const normalized=Array.isArray(value.costItems)?{...value,costItems:value.costItems.filter(item=>item.amount>0)}:value;
+      validateActivity(normalized);
       const old=data.activities.find(a=>a.id===value.id);
-      const before=charges(old),after=charges(value);
+      const before=charges(old),after=charges(normalized);
       for(const t of data.teams){
         if(t.used-(before[t.id]||0)+(after[t.id]||0)>t.budget||
-          (value.actual!==null && t.used-(before[t.id]||0)+
-           (charges({...value,status:`executed`})[t.id]||0)>t.budget))
+          (normalized.actual!==null && t.used-(before[t.id]||0)+
+           (charges({...normalized,status:`executed`})[t.id]||0)>t.budget))
           throw new Error(`ميزانية ${t.name} لا تكفي؛ يرجى تعديل ميزانية الفريق`);
       }
       setBusy(true);
-      await perform(`saveActivity`,value,`تم حفظ النشاط وتحديث الميزانيات`);
+      await perform(`saveActivity`,normalized,`تم حفظ النشاط وتحديث الميزانيات`);
       if(closeDialog)setDraft(null);
     }catch(e){
       notify(e.message);

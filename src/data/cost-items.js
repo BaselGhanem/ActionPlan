@@ -1,6 +1,6 @@
 // Cost components are purposes of spend, independent of the team budget allocation.
 export const COST_CATEGORIES=Object.freeze([
- {value:"client",label:"تكلفة مرتبطة بالعميل"},
+ {value:"client",label:"Honorarium / أتعاب الأطباء"},
  {value:"meal",label:"غداء / ضيافة"},
  {value:"venue",label:"قاعة / مكان"},
  {value:"logistics",label:"تجهيزات / نقل"},
@@ -21,4 +21,11 @@ export function validateCostItems(items,total){
  }
  if(items.length&&costItemsTotal(items)!==total)
   throw new Error("مجموع تفاصيل تكلفة النشاط لا يطابق الميزانية المخططة");
+}
+
+export function withCostBreakdown(draft,costItems){
+ const total=costItemsTotal(costItems),shares=draft.teamShares||[];
+ const size=shares.length;
+ const evenly=shares.map((s,i)=>Math.floor(total/size)+(i<total%size?1:0));
+ return {...draft,total,costItems,teamShares:shares.map((s,i)=>({...s,amount:total===draft.total?s.amount:evenly[i]}))};
 }

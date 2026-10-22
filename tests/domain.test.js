@@ -129,3 +129,22 @@ test("activity cost purposes reconcile to one total, independent of team budget"
  assert.throws(()=>validateActivity({...a,costItems:[{...a.costItems[0],amount:-1}]}),/غير صحيح/);
  assert.doesNotThrow(()=>validateActivity({...a,costItems:[]}));
 });
+
+test("cost-first honorarium plus lunch calculates activity total and distributes equally",async()=>{
+ const {withCostBreakdown,costItemsTotal}=await import("../src/data/cost-items.js");
+ let a={type:"Group Meeting",status:"planned",date:"",total:0,actual:null,
+  clients:[{code:"101",name:"Doctor"}],
+  teamShares:[{teamId:"A",amount:0,actual:null},{teamId:"B",amount:0,actual:null}],
+  costItems:[{id:"honor",category:"client",label:"Honorarium",amount:0},{id:"lunch",category:"meal",label:"غداء",amount:0}]};
+ a=withCostBreakdown(a,a.costItems.map(x=>x.id==="honor"?{...x,amount:100000}:x));
+ assert.equal(a.total,100000);assert.deepEqual(a.teamShares.map(s=>s.amount),[50000,50000]);
+ a=withCostBreakdown(a,a.costItems.map(x=>x.id==="lunch"?{...x,amount:50000}:x));
+ assert.equal(costItemsTotal(a.costItems),150000);
+ assert.equal(a.total,150000);assert.deepEqual(a.teamShares.map(s=>s.amount),[75000,75000]);
+ assert.doesNotThrow(()=>validateActivity(a));
+ a.teamShares[0].amount=100000;a.teamShares[1].amount=50000;
+ a=withCostBreakdown(a,a.costItems);
+ assert.deepEqual(a.teamShares.map(s=>s.amount),[100000,50000]);
+ a=withCostBreakdown(a,a.costItems.map(x=>x.id==="lunch"?{...x,amount:40000}:x));
+ assert.deepEqual(a.teamShares.map(s=>s.amount),[70000,70000]);assert.equal(a.total,140000);
+});
