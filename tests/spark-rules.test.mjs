@@ -138,6 +138,7 @@ test(`schema 2 activity upgrades to team-only schema 3 without losing totals`,as
 
 test(`admin upgrades an activity from a team owner without changing creator`,async()=>{
  await persist(db(),`cross-owner`,draft());
+ await persist(db(),`cross-owner`,draft());
  const next={
   type:`ندوة`,total:10000,actual:null,status:`planned`,date:`2027-05-14`,notes:`converted`,
   clients:[{code:`C0`,name:`طبيب 0`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
