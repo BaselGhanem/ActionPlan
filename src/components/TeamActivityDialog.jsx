@@ -152,7 +152,7 @@ export function TeamActivityDialog({ draft,setDraft,teams,types,eligible,canEdit
               onChange={e=>{try{
                const amount=read(e.target.value);
                setDraft(d=>({...d,honorariumShares:(d.honorariumShares||[]).map(x=>x.code===share.code?{...x,amount}:x)}));
-              }catch{/* Keep previous valid amount */}}/>
+              }catch{}}}/>
             </span>
            </label>;
           })}
