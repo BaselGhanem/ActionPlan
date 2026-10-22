@@ -72,7 +72,7 @@ export function TeamActivityDialog({ draft,setDraft,teams,types,eligible,canEdit
        <button type="button" className="text-button" disabled={(draft.costItems||[]).length>=8}
         onClick={()=>setDraft(d=>{
          const current=d.costItems||[];
-         return withCostBreakdown(d,[...current,{id:crypto.randomUUID(),category:"other",label:"بند آخر",amount:0}]);
+         return withCostBreakdown(d,[...current,{id:crypto.randomUUID(),category:"other",label:"بند آخر",amount:current.length===0?d.total:0}]);
         })}><Plus size={17}/> إضافة بند</button>
       </div>
       {(draft.costItems||[]).length ? (
