@@ -71,11 +71,12 @@ async function load(){const p=await profile();let f=await getDoc(financeRef);if(
  })}));
  const ownCodes=limited?new Set(rosters[0]?.rows.map(c=>c.code)||[]):null;
  const activities=list(a).filter(a=>a.status!==`deleted`).map(a=>decodeActivity(a.id,a,allTeams)).map(activity=>{
-  if(!limited)return activity;
+  const origin=allTeams.find(t=>t.accountId&&t.accountId===activity.creator);
+  const attributed={...activity,creatorTeamId:origin?.id||null,creatorTeamName:origin?.name||"الإدارة / غير محدد"};
+  if(!limited)return attributed;
   const mine=activity.teamShares.filter(share=>share.teamId===p.teamId);
-  return {...activity,teamShares:mine,clients:activity.clients.filter(c=>ownCodes.has(c.code)),
-   total:mine.reduce((n,share)=>n+share.amount,0),
-   actual:activity.actual===null?null:mine.reduce((n,share)=>n+(share.actual||0),0),
+  return {...attributed,teamShares:mine,clients:activity.clients.filter(c=>ownCodes.has(c.code)),
+   total:activity.total,actual:activity.actual,
    costItems:[],honorariumShares:[],notes:``,scopedView:true};
  });
  return {profile:p,teams,customers,rosters,activities,visibilityHidden:limited,
