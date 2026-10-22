@@ -1914,3 +1914,24 @@ tfoot td {
  .actual-team-line input {max-width:140px;}
  .actual-edit-buttons > button {flex:1;}
 }
+
+/* Distinct optional activity cost purposes, independent of teams' financial allocations. */
+.activity-cost-card {grid-column:1/-1;}
+.activity-cost-card h3 {margin-bottom:5px;}
+.activity-cost-card .hint {margin:0;max-width:650px;}
+.activity-cost-list {display:grid;gap:10px;}
+.activity-cost-item {display:grid;grid-template-columns:minmax(155px,1fr) minmax(160px,1.4fr) minmax(115px,.7fr) 34px;align-items:end;gap:10px;padding:12px;background:#f7fafc;border:1px solid #e0ebf2;border-radius:10px;}
+.activity-cost-item label {display:flex;flex-direction:column;gap:6px;min-width:0;font-size:11px;color:#657c93;}
+.activity-cost-item select,.activity-cost-item input {min-width:0;width:100%;}
+.activity-cost-remove {color:#bb5750;margin-bottom:4px;}
+.activity-cost-placeholder {background:#f5f9fc;border:1px dashed #dae7f0;border-radius:10px;padding:15px;font-size:12px;color:#6d8297;margin:0;}
+@media(max-width:750px) {
+ .activity-cost-item {grid-template-columns:repeat(2,minmax(0,1fr));}
+ .activity-cost-item label:nth-child(2) {grid-column:1/-1;grid-row:2;}
+ .activity-cost-remove {justify-self:end;}
+}
+@media(max-width:390px) {
+ .activity-cost-item {grid-template-columns:minmax(0,1fr) 34px;}
+ .activity-cost-item label {grid-column:1/-1;}
+ .activity-cost-remove {grid-column:2;grid-row:1;}
+}
