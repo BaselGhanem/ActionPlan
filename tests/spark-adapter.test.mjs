@@ -46,6 +46,8 @@ test(`Spark adapter: bootstrap, provisioning, imports, distribution, reset and o
   clients:[{code:`001`,name:`الاسم المعتمد الأخير`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
   teamShares:[{teamId:t1,amount:6500,actual:null},{teamId:t2,amount:3500,actual:null}]};
  assert.equal((await request(`load`)).profile.role,`admin`);
+ const previousEntry=(await getDoc(doc(db,`activities/${a}`))).data();
+ console.log(`PREVIOUS_ACTIVITY_FIELDS`,previousEntry.schema,previousEntry.rev,previousEntry.status,previousEntry.createdAt);
  console.log(`Phase: legacy-to-team-only`);
  await request(`saveActivity`,modern);
  data=await request(`load`);
