@@ -45,6 +45,7 @@ import {withHonorariumParticipants} from "./data/cost-items";
 import { TeamActivityDialog } from "./components/TeamActivityDialog";
 import { ActualTracking } from "./components/ActualTracking";
 import { Standalone } from "./components/Standalone";
+import { IncomingExpenses } from "./components/IncomingExpenses";
 import { demoData } from "./demo";
 import {downloadLocalDirectory} from "./data/customer-cache.js";
 import {
@@ -73,6 +74,7 @@ const routes = [
   { id: `activities`, title: `الأنشطة`, icon: CalendarBlank },
   { id: `standalone`, title: `Stand Alone`, icon: Target },
   { id: `actuals`, title: `الفعلي والمتابعة`, icon: CheckCircle },
+  { id: `incoming`, title: `مصاريف الفرق الواردة`, icon: UsersThree },
   { id: `reports`, title: `التقارير`, icon: ChartBar },
   { id: `admin`, title: `الإدارة`, icon: Gear },
 ];
@@ -946,6 +948,9 @@ export function App() {
                 }catch(e){notify(e.message);}finally{setBusy(false);}
               }}
             />
+          )}
+          {page === `incoming` && (
+            <IncomingExpenses data={data} onOpen={openActivity}/>
           )}
           {page === `actuals` && (
             <ActualTracking data={data} busy={busy} onOpen={openActivity}

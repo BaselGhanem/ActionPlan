@@ -2028,3 +2028,21 @@ tfoot td {
 .team-visibility-control{display:flex;align-items:center;gap:10px;white-space:nowrap;font-size:12px;font-weight:700;color:#08797b;}
 .team-visibility-control input{width:19px;height:19px;accent-color:#099999;cursor:pointer;}
 @media(max-width:540px){.team-visibility-row{align-items:flex-start;flex-direction:column;gap:10px;}.team-visibility-control{width:100%;justify-content:flex-start;}}
+
+/* Incoming charges from other teams into the receiving team's explicit budget shares */
+.incoming-expenses-page{display:grid;gap:18px;min-width:0;}
+.incoming-filter-bar{display:flex;flex-wrap:wrap;gap:14px;align-items:end;}
+.incoming-filter-bar>.field{min-width:170px;max-width:230px;flex:1;}
+.incoming-filter-bar>.search{flex:2;min-width:200px;}
+.incoming-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+.incoming-summary>div{background:white;border:1px solid #dce8ef;border-radius:12px;padding:18px;display:grid;gap:8px;min-width:0;}
+.incoming-summary small{color:#6b8497;font-size:11px;}
+.incoming-summary b{font-size:21px;color:#0d5468;overflow-wrap:anywhere;}
+.incoming-empty{padding:25px;text-align:center;color:#718596;}
+.incoming-disclaimer{padding:12px 15px;border-radius:10px;background:#f1f8f8;color:#526e7e;font-size:12px;margin:0;}
+.activity-ledger-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0;}
+.activity-ledger-filters>.search{grid-column:span 2;min-width:0;}
+.activity-ledger-filters select,.activity-ledger-filters input{min-width:0;width:100%;}
+.activity-ledger-filters>button{align-self:center;}
+.directory-actions{flex-wrap:wrap;}
+@media(max-width:700px){.incoming-summary{grid-template-columns:1fr;}.incoming-filter-bar{flex-direction:column;align-items:stretch;}.incoming-filter-bar>.field,.incoming-filter-bar>.search{width:100%;max-width:none;}.activity-ledger-filters{grid-template-columns:repeat(2,minmax(0,1fr));}.activity-ledger-filters>.search{grid-column:1/-1;}}
