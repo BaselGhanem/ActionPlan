@@ -952,7 +952,9 @@ export function App() {
               onChoose={async item=>{
                 try{setBusy(true);if(isDemo){notify("هذا وضع المعاينة");return;}
                   await request("standaloneChoose",item);await reload();notify("تم تحديث اختيار الطبيب", "success");
-                }catch(e){notify(e.message);}finally{setBusy(false);}
+                }catch(e){
+                  notify(e.code==="permission-denied"?"رفض Firebase حفظ الاختيار. تأكد من نشر قواعد Firestore الجديدة، وتخصص الطبيب، وعضويته في الفريق":e.message);
+                }finally{setBusy(false);}
               }}
             />
           )}

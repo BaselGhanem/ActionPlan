@@ -22,7 +22,10 @@ export function externalTeamExpenses(activities,teamId,teams) {
    :sourceTeam(a,teams);
   if(origin.id===teamId)return [];
   return [{activity:a,origin,teamId,...share}];
- }).sort((a,b)=>Number(b.activity.createdAt||0)-Number(a.activity.createdAt||0));
+ }).sort((a,b)=>{
+  const stamp=x=>x?.seconds?x.seconds*1000:x?._seconds?x._seconds*1000:Number(x||0);
+  return stamp(b.activity.createdAt)-stamp(a.activity.createdAt);
+ });
 }
 export function externalExpenseTotals(entries) {
  return entries.reduce((t,e)=>({planned:t.planned+e.planned,
