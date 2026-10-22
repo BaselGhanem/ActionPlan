@@ -37,6 +37,19 @@ test(`Spark adapter: bootstrap, provisioning, imports, distribution, reset and o
  data=await request(`load`);assert.equal(data.profile.accountId,oldUser.accountId);
  await request(`saveActivity`,{...d,id:a,notes:`التعديل بعد إعادة كلمة المرور`});
  await signOut(auth);await signInWithEmailAndPassword(auth,email,pass);
+ const modern={id:a,type:d.type,total:10000,actual:null,status:`planned`,date:`2027-05-14`,notes:`ترحيل توزيع الفريق`,
+  clients:[{code:`001`,name:`الاسم المعتمد الأخير`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
+  teamShares:[{teamId:t1,amount:6500,actual:null},{teamId:t2,amount:3500,actual:null}]};
+ await request(`saveActivity`,modern);
+ data=await request(`load`);
+ assert.equal(data.activities.find(x=>x.id===a).schema,3);
+ assert.equal(data.activities.find(x=>x.id===a).teamShares[0].amount+
+              data.activities.find(x=>x.id===a).teamShares[1].amount,10000);
+ await request(`saveActivity`,{...modern,status:`executed`,actual:8300,
+  teamShares:[{teamId:t1,amount:6500,actual:5000},{teamId:t2,amount:3500,actual:3300}]});
+ data=await request(`load`);
+ assert.equal(data.activities.find(x=>x.id===a).actual,8300);
+ await request(`saveActivity`,{...modern,status:`planned`,actual:null});
  await upload(t1,[c2]);data=await request(`load`);assert.ok(!data.rosters.find(r=>r.teamId===t1).rows.some(c=>c.code===`001`));assert.equal(data.activities.length,1);
  await request(`archiveCustomers`,{rows:[{code:`001`,name:`الاسم المعتمد الأخير`,specialty:`قلب`,area:`عمان`}]});
  data=await request(`load`);

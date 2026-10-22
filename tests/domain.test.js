@@ -96,3 +96,18 @@ test(`executed activity requires actual and reconciled actual shares`, () => {
   a.clients[0].shares[1].actual = 2;
   assert.doesNotThrow(() => validateActivity(a));
 });
+
+test(`new model distributes directly to teams, not clients`,()=>{
+ const a={type:`ندوة`,status:`planned`,total:12000,actual:null,date:`2027-07-16`,notes:``,
+  clients:[{code:`001`,name:`د. زيد`},{code:`002`,name:`د. ريم`}],
+  teamShares:[{teamId:`a`,amount:7000,actual:null},{teamId:`b`,amount:5000,actual:null}]};
+ assert.doesNotThrow(()=>validateActivity(a));
+ assert.deepEqual(charges(a),{a:7000,b:5000});
+ const broken={...a,teamShares:a.teamShares.map(s=>({...s}))};broken.teamShares[0].amount++;
+ assert.throws(()=>validateActivity(broken),/حصص الفرق/);
+ a.actual=9000;a.teamShares[0].actual=5500;a.teamShares[1].actual=3500;
+ assert.doesNotThrow(()=>validateActivity(a));
+ assert.deepEqual(charges(a),{a:7000,b:5000});
+ a.status=`executed`;
+ assert.deepEqual(charges(a),{a:5500,b:3500});
+});

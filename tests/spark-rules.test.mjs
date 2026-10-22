@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
 import {doc,setDoc,getDoc,updateDoc,runTransaction,writeBatch,serverTimestamp,getDocs,collection} from 'firebase/firestore';
 import {prepareProofs} from '../src/data/proofs.js';
-import {encodeActivity,tombstone,wireCharges} from '../src/data/activity-wire.js';
+import {encodeActivity,encodeTeamActivity,tombstone,wireCharges,decodeActivity} from '../src/data/activity-wire.js';
 let env;
 const projectId=`demo-actionplan`;
 const customer=(i)=>({code:`C${i}`,name:`طبيب ${i}`,kind:`طبيب`,specialty:`قلب`,area:`عمان`,visitingTeams:Array.from({length:8},(_,j)=>`t${j}`),visits:Object.fromEntries(Array.from({length:8},(_,j)=>[`t${j}`,{roster:`r${j}`,classification:`A`,nextRoster:``,nextClassification:``}]))});
@@ -13,7 +13,7 @@ const profile=(role,accountId,teamId=null)=>({name:role,role,accountId,teamId,us
 const draft=(amount=10000,count=1,teams=2)=>({type:`ندوة`,total:amount*count,actual:null,status:`planned`,date:``,notes:``,clients:Array.from({length:count},(_,i)=>({...customer(i),amount,actual:null,shares:Array.from({length:teams},(_,j)=>({teamId:`t${j}`,amount:amount/teams,actual:null}))}))});
 const db=(user=`u1`)=>env.authenticatedContext(user).firestore();
 async function seed(){await env.withSecurityRulesDisabled(async c=>{const d=c.firestore();await setDoc(doc(d,`finance/2027`),finance());await Promise.all([setDoc(doc(d,`users/u1`),profile(`team`,`u1`,`t0`)),setDoc(doc(d,`users/u2`),profile(`team`,`u2`,`t1`)),setDoc(doc(d,`users/admin`),profile(`admin`,`admin`)),setDoc(doc(d,`users/manager`),profile(`manager`,`manager`)),...Array.from({length:8},(_,i)=>setDoc(doc(d,`customers/C${i}`),customer(i))),...Array.from({length:8},(_,i)=>setDoc(doc(d,`budgets/t${i}`),{budget:100000,used:0,mutation:null}))]);});}
-async function persist(d,activityId,input,options={}){const initialOld=(await getDoc(doc(d,`activities/${activityId}`))).data()||null;let prepared;if(!options.delete){prepared=encodeActivity(input,{uid:options.uid||`u1`,accountId:options.accountId||`u1`,previous:initialOld});if(options.tamper)prepared=options.tamper(prepared);prepared.proofId=`p-${activityId}-${crypto.randomUUID()}`;await prepareProofs(d,{...prepared,activityId},{owner:options.uid||`u1`,baseRev:initialOld?.rev||0,rosterEpoch:0,proofId:prepared.proofId});}return runTransaction(d,async tx=>{const fr=doc(d,`finance/2027`),ar=doc(d,`activities/${activityId}`),[fs,as]=await Promise.all([tx.get(fr),tx.get(ar)]);const f=fs.data(),old=as.exists()?as.data():null;let next=options.delete?tombstone(old,options.uid||`u1`,serverTimestamp()):prepared;next.updatedAt=serverTimestamp();const before=wireCharges(old),after=wireCharges(next),teams={...f.teams};for(const t of new Set([...(old?.teamIds||[]),...next.teamIds]))teams[t]={...teams[t],used:teams[t].used-(before[t]||0)+(after[t]||0)};const m={affectedTeams:[...new Set([...(old?.teamIds||[]),...next.teamIds])],kind:options.delete?`deleteActivity`:`saveActivity`,uid:options.uid||`u1`,activityId,rev:next.rev,before:old,after:next,at:serverTimestamp()};tx.set(ar,next);if(!options.skipFinance){for(const t of m.affectedTeams)tx.set(doc(d,`budgets/${t}`),{budget:teams[t].budget,used:teams[t].used,mutation:{activityId,rev:next.rev,uid:options.uid||`u1`,at:serverTimestamp()}});tx.update(fr,{teams,mutation:m});}if(!options.skipAudit)tx.set(doc(d,`audit/${activityId}_${next.rev}`),m);});}
+async function persist(d,activityId,input,options={}){const initialOld=(await getDoc(doc(d,`activities/${activityId}`))).data()||null;let prepared;if(!options.delete){prepared=(input.teamShares?encodeTeamActivity:encodeActivity)(input,{uid:options.uid||`u1`,accountId:options.accountId||`u1`,previous:initialOld});if(options.tamper)prepared=options.tamper(prepared);prepared.proofId=`p-${activityId}-${crypto.randomUUID()}`;await prepareProofs(d,{...prepared,activityId},{owner:options.uid||`u1`,baseRev:initialOld?.rev||0,rosterEpoch:0,proofId:prepared.proofId});}return runTransaction(d,async tx=>{const fr=doc(d,`finance/2027`),ar=doc(d,`activities/${activityId}`),[fs,as]=await Promise.all([tx.get(fr),tx.get(ar)]);const f=fs.data(),old=as.exists()?as.data():null;let next=options.delete?tombstone(old,options.uid||`u1`,serverTimestamp()):prepared;next.updatedAt=serverTimestamp();const before=wireCharges(old),after=wireCharges(next),teams={...f.teams};for(const t of new Set([...(old?.teamIds||[]),...next.teamIds]))teams[t]={...teams[t],used:teams[t].used-(before[t]||0)+(after[t]||0)};const m={affectedTeams:[...new Set([...(old?.teamIds||[]),...next.teamIds])],kind:options.delete?`deleteActivity`:`saveActivity`,uid:options.uid||`u1`,activityId,rev:next.rev,before:old,after:next,at:serverTimestamp()};tx.set(ar,next);if(!options.skipFinance){for(const t of m.affectedTeams)tx.set(doc(d,`budgets/${t}`),{budget:teams[t].budget,used:teams[t].used,mutation:{activityId,rev:next.rev,uid:options.uid||`u1`,at:serverTimestamp()}});tx.update(fr,{teams,mutation:m});}if(!options.skipAudit)tx.set(doc(d,`audit/${activityId}_${next.rev}`),m);});}
 before(async()=>{env=await initializeTestEnvironment({projectId,firestore:{rules:await readFile(new URL(`../firestore.rules`,import.meta.url),`utf8`)}})});
 after(async()=>{await env?.cleanup()});beforeEach(async()=>{await env.clearFirestore();await seed()});
 test(`authenticated users read business data; strangers cannot`,async()=>{await assertSucceeds(getDoc(doc(db(),`finance/2027`)));await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(),`finance/2027`)))});
@@ -84,4 +84,37 @@ test(`ten-customer archive uses the exact production batch transaction`,async()=
   });
  }));
  for(const r of refs)assert.equal((await getDoc(r)).data().deleted,true);
+});
+
+test(`schema 3 shared activity commits only team allocations and actual is saved per team`,async()=>{
+ const activity={
+  type:`ندوة`,total:10000,actual:null,status:`planned`,date:`2027-03-12`,notes:`team-only`,
+  clients:[{code:`C0`,name:`طبيب 0`,kind:`طبيب`,specialty:`قلب`,area:`عمان`},
+   {code:`C1`,name:`طبيب 1`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
+  teamShares:[{teamId:`t0`,amount:7000,actual:null},{teamId:`t1`,amount:3000,actual:null}],
+ };
+ await assertSucceeds(persist(db(),`new-schema`,activity));
+ const saved=(await getDoc(doc(db(),`activities/new-schema`))).data();
+ assert.equal(saved.schema,3);
+ assert.equal(saved.totals.t0,7000);
+ assert.equal(saved.rows.C0.plan,undefined);
+ assert.equal(saved.rows.C0.amount,undefined);
+ const decoded=decodeActivity(`new-schema`,saved,[{id:`t0`,name:`Team 0`},{id:`t1`,name:`Team 1`}]);
+ assert.equal(decoded.teamShares.length,2);
+ assert.equal(decoded.clients[0].shares,undefined);
+ assert.equal((await getDoc(doc(db(),`finance/2027`))).data().teams.t0.used,7000);
+ const next={...activity,status:`executed`,actual:8500,
+  teamShares:[{teamId:`t0`,amount:7000,actual:5500},{teamId:`t1`,amount:3000,actual:3000}]};
+ await assertSucceeds(persist(db(),`new-schema`,next));
+ assert.equal((await getDoc(doc(db(),`finance/2027`))).data().teams.t0.used,5500);
+ assert.equal((await getDoc(doc(db(),`finance/2027`))).data().teams.t1.used,3000);
+});
+test(`schema 3 cannot allocate to unrelated team or forge aggregate totals`,async()=>{
+ const activity={
+  type:`ندوة`,total:10000,actual:null,status:`planned`,date:``,notes:``,
+  clients:[{code:`C0`,name:`طبيب 0`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
+  teamShares:[{teamId:`t0`,amount:10000,actual:null}],
+ };
+ await assertFails(persist(db(),`unrelated`,{...activity,teamShares:[{teamId:`t7`,amount:10000,actual:null}]} ,{tamper:a=>a}));
+ await assertFails(persist(db(),`forged`,activity,{tamper:a=>({...a,totals:{t0:9999}})}));
 });
