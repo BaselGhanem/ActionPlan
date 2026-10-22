@@ -1,3 +1,4 @@
+import {validateCostItems} from "./cost-items.js";
 export const fail = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -63,6 +64,7 @@ export function validateActivity(a) {
     Number.isSafeInteger(a.total) && a.total > 0 && a.total <= 100000000000,
     `أدخل إجمالي النشاط`,
   );
+  validateCostItems(a.costItems,a.total);
   if(Array.isArray(a.teamShares)) validateTeamActivity(a);
   else {
   fail(

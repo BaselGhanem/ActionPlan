@@ -10,6 +10,7 @@ export function encodeTeamActivity(draft,{accountId,uid,previous=null,now=Date.n
   createdAt:previous?.createdAt||now,updatedAt:now,editedBy:uid,rev:(previous?.rev||0)+1,
   status:draft.status,type:draft.type,total:draft.total,actual:draft.actual,
   date:draft.date||``,notes:draft.notes||``,teamIds,clientKeys:Object.keys(rows),rows,
+  ...(draft.costItems?.length?{costItems:draft.costItems.map(({id,category,label,amount})=>({id,category,label,amount}))}:{}),
   totals:Object.fromEntries(draft.teamShares.map(s=>[s.teamId,s.amount])),
   actualTotals:Object.fromEntries(draft.teamShares.map(s=>[s.teamId,draft.actual===null?0:s.actual]))};
 }
@@ -31,7 +32,7 @@ export function decodeActivity(id,a,teams=[]){
   teamId,teamName:teams.find(t=>t.id===teamId)?.name||teamId,
   amount:a.totals[teamId]||0,actual:a.actual===null?null:a.actualTotals[teamId]||0,
  }));
- return {...a,id,teamShares,clients:a.clientKeys.map(k=>{
+ return {...a,id,costItems:a.costItems||[],teamShares,clients:a.clientKeys.map(k=>{
   const c=a.rows[k];
   if(a.schema===3) return {...c};
   return {...c,amount:c.amount,actual:a.actual===null?null:c.actual,

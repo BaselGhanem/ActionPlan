@@ -83,6 +83,7 @@ const defaultDraft = () => ({
   notes: ``,
   clients: [],
   teamShares: [],
+  costItems: [],
 });
 /** A single activity indicator used wherever the doctor is named. */
 function ClientName({ client, activityCounts, customerKinds }) {
@@ -498,6 +499,7 @@ export function App() {
         code:c.code,name:c.name,kind:c.kind||``,specialty:c.specialty||``,area:c.area||``,
       })),
       teamShares:structuredClone(activity.teamShares||[]),
+      costItems:structuredClone(activity.costItems||[]),
     };
   }
   async function persistActivity(value,closeDialog=false) {
@@ -1145,12 +1147,12 @@ function Dashboard({ data, onGo }) {
           <h2>ميزانيات الفرق</h2>
           <span>{planned.length} نشاط مخطط</span>
         </div>
-        <TeamTable teams={data.teams} />
+        <TeamTable teams={data.teams} dashboard />
       </section>
     </>
   );
 }
-function TeamTable({ teams }) {
+function TeamTable({ teams, dashboard = false }) {
   return (
     <div className="table-wrap">
       <table>
@@ -1159,7 +1161,7 @@ function TeamTable({ teams }) {
             <th>الفريق</th>
             <th>الميزانية USD</th>
             <th>المحجوز والمصروف USD</th>
-            <th>المتاح USD</th>
+            <th>{dashboard ? `المتبقي من الميزانية USD` : `المتاح USD`}</th>
             <th>الاستخدام</th>
           </tr>
         </thead>

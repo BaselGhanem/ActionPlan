@@ -61,6 +61,15 @@ export function demoData() {
       actual: null,
       notes: `سجل توضيحي لتجربة النظام`,
       createdAt: Date.now(),
+      schema: 3,
+      teamShares: [
+        {teamId:`cardio`,teamName:`Cardio`,amount:60000,actual:null},
+        {teamId:`primary`,teamName:`Primary Care`,amount:60000,actual:null},
+      ],
+      costItems: [
+        {id:`demo-cost-1`,category:`client`,label:`تكلفة مرتبطة بالعميل`,amount:90000},
+        {id:`demo-cost-2`,category:`meal`,label:`غداء / ضيافة`,amount:30000},
+      ],
       clients: [
         {
           ...customers[0],

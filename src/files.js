@@ -157,6 +157,13 @@ export async function buildWorkbook(data) {
       ])),
     ],
     [
+      `تفاصيل تكلفة الأنشطة`,
+      [`رقم النشاط`,`نوع النشاط`,`نوع التكلفة`,`وصف البند`,`المخطط USD`],
+      data.activities.flatMap(a=>(a.costItems||[]).map(item=>[
+        a.id,a.type,item.category,item.label,item.amount/100,
+      ])),
+    ],
+    [
       `المشاركون في الأنشطة`,
       [`رقم النشاط`,`نوع النشاط`,`كود العميل`,`العميل`,`التخصص`,`المنطقة`],
       data.activities.flatMap(a=>a.clients.map(c=>[
