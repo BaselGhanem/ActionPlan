@@ -123,3 +123,15 @@ test(`schema 3 cannot allocate to unrelated team or forge aggregate totals`,asyn
  await assertFails(persist(db(),`unrelated`,{...activity,teamShares:[{teamId:`t7`,amount:10000,actual:null}]} ,{tamper:a=>a}));
  await assertFails(persist(db(),`forged`,activity,{tamper:a=>({...a,totals:{t0:9999}})}));
 });
+
+test(`schema 2 activity upgrades to team-only schema 3 without losing totals`,async()=>{
+ await persist(db(),`upgrade`,draft());
+ const next={
+  type:`ندوة`,total:10000,actual:null,status:`planned`,date:`2027-05-14`,notes:`converted`,
+  clients:[{code:`C0`,name:`طبيب 0`,kind:`طبيب`,specialty:`قلب`,area:`عمان`}],
+  teamShares:[{teamId:`t0`,amount:6500,actual:null},{teamId:`t1`,amount:3500,actual:null}],
+ };
+ await assertSucceeds(persist(db(),`upgrade`,next));
+ const saved=(await getDoc(doc(db(),`activities/upgrade`))).data();
+ assert.equal(saved.schema,3);assert.equal(saved.rev,2);assert.equal(saved.totals.t0,6500);
+});
