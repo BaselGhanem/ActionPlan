@@ -44,7 +44,7 @@ async function toggle(identity,campaign,teamId,code,selected=true){
   assert.ok(current.exists());
   if(selected===old.exists())return;
   const choiceId=group+"__"+code;
-  if(selected)tx.set(c,{campaign,teamId,code,actor:identity,at:serverTimestamp()});
+  if(selected)tx.set(c,{campaign,teamId,code,encodedCode:encodeURIComponent(code),actor:identity,at:serverTimestamp()});
   else tx.delete(c);
   tx.update(ref,{count:current.data().count+(selected?1:-1),mutation:{
    kind:selected?"add":"remove",choiceId,actor:identity,at:serverTimestamp()
@@ -83,7 +83,7 @@ test("specialty, type, team, quota, direct writes are guarded at Firestore level
  await assertFails(toggle("u","ent-chest","U","C0"));
  await assertSucceeds(toggle("u","uro","U","C2"));
  await assertFails(toggle("u","uro","U","C0"));
- await assertFails(setDoc(choice(db("a"),"ent-chest__A","C0"),{campaign:"ent-chest",teamId:"A",code:"C0",actor:"a",at:serverTimestamp()}));
+ await assertFails(setDoc(choice(db("a"),"ent-chest__A","C0"),{campaign:"ent-chest",teamId:"A",code:"C0",encodedCode:"C0",actor:"a",at:serverTimestamp()}));
  await assertFails(updateDoc(quota(db("a"),"ent-chest__A"),{count:35}));
  await env.withSecurityRulesDisabled(async ctx=>{await updateDoc(quota(ctx.firestore(),"ent-chest__A"),{count:35});});
  await assertFails(toggle("a","ent-chest","A","C0"));
@@ -130,4 +130,19 @@ test("cross-team matching remains admin-only even for manager roles",async()=>{
  await assertFails(setDoc(quota(db("manager"),"ent-chest__M"),{campaign:"ent-chest",teamId:"M",limit:35,count:0}));
  const visible=await assertSucceeds(getDocs(collection(db("admin"),"standaloneChoices")));
  assert.equal(visible.size,1);
+});
+
+test("standalone doctor IDs containing spaces use the real encoded customer Firestore path",async()=>{
+ await bootstrap();
+ await env.withSecurityRulesDisabled(async ctx=>{
+  const code="22493 - 37594";
+  const doctor={...docData(code,"ENT"),code};
+  await setDoc(doc(ctx.firestore(),"customers/"+encodeURIComponent(code)),doctor);
+ });
+ const code="22493 - 37594";
+ await assertSucceeds(toggle("a","ent-chest","A",code));
+ const selected=(await getDoc(choice(db("a"),"ent-chest__A",code))).data();
+ assert.equal(selected.code,code);
+ assert.equal(selected.encodedCode,encodeURIComponent(code));
+ await assertSucceeds(toggle("a","ent-chest","A",code,false));
 });

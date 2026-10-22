@@ -317,8 +317,8 @@ service cloud.firestore {
     (c == 'uro' && name.matches('(?i)(uro|matador)'));
   }
   function standaloneLimit(c) { return c == 'ent-chest' ? 35 : 25; }
-  function validStandaloneDoctor(c,t,code) {
-   let doctor=get(/databases/$(database)/documents/customers/$(code)).data;
+  function validStandaloneDoctor(c,t,code,encodedCode) {
+   let doctor=get(/databases/$(database)/documents/customers/$(encodedCode)).data;
    let spec=doctor.get('specialty','');
    return doctor.code == code && doctor.get('deleted',false) != true &&
     doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') &&
@@ -367,11 +367,13 @@ service cloud.firestore {
    allow create: if standaloneAccess(request.resource.data.teamId) &&
     standaloneCampaign(request.resource.data.campaign,request.resource.data.teamId) &&
     choiceId == request.resource.data.campaign + '__' + request.resource.data.teamId + '__' + request.resource.data.code &&
-    request.resource.data.keys().hasOnly(['campaign','teamId','code','actor','at']) &&
-    request.resource.data.keys().hasAll(['campaign','teamId','code','actor','at']) &&
+    request.resource.data.keys().hasOnly(['campaign','teamId','code','encodedCode','actor','at']) &&
+    request.resource.data.keys().hasAll(['campaign','teamId','code','encodedCode','actor','at']) &&
     request.resource.data.actor == request.auth.uid &&
     request.resource.data.at == request.time &&
-    validStandaloneDoctor(request.resource.data.campaign,request.resource.data.teamId,request.resource.data.code) &&
+    request.resource.data.encodedCode is string &&
+    request.resource.data.encodedCode.size() > 0 && request.resource.data.encodedCode.size() <= 300 &&
+    validStandaloneDoctor(request.resource.data.campaign,request.resource.data.teamId,request.resource.data.code,request.resource.data.encodedCode) &&
     quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.kind == 'add' &&
     quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.choiceId == choiceId &&
     quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.actor == request.auth.uid &&

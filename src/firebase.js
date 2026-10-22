@@ -190,7 +190,7 @@ async function chooseStandAlone({campaign,teamId,code,selected}){
   const next=q.data().count+(selected?1:-1);
   fail(next>=0&&next<=q.data().limit,`الحد الأقصى لهذا الفريق: ${q.data().limit} طبيب`);
   const mutation={kind:selected?"add":"remove",choiceId,actor:uid(),at:serverTimestamp()};
-  if(selected)tx.set(choiceRef,{campaign,teamId,code,actor:uid(),at:serverTimestamp()});
+  if(selected)tx.set(choiceRef,{campaign,teamId,code,encodedCode:encodeURIComponent(code),actor:uid(),at:serverTimestamp()});
   else tx.delete(choiceRef);
   tx.update(quotaRef,{count:next,mutation});
  });
