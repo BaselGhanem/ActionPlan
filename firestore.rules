@@ -289,6 +289,82 @@ service cloud.firestore {
      || archiveCustomer(code);
     allow delete: if false;
    }
+
+  function standaloneAccess(t) {
+   return manager() || (active() && user().role == 'team' && user().teamId == t);
+  }
+  function standaloneCampaign(c,t) {
+   let f=get(/databases/$(database)/documents/finance/2027).data;
+   let name=f.teams.get(t,{}).get('name','');
+   return (c == 'ent-chest' && name.matches('(?i)(azord|matador)')) ||
+    (c == 'uro' && name.matches('(?i)(uro|matador)'));
+  }
+  function standaloneLimit(c) { return c == 'ent-chest' ? 35 : 25; }
+  function validStandaloneDoctor(c,t,code) {
+   let doctor=get(/databases/$(database)/documents/customers/$(code)).data;
+   let spec=doctor.get('specialty','');
+   return doctor.code == code && doctor.get('deleted',false) != true &&
+    doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') &&
+    doctor.visitingTeams.hasAny([t]) &&
+    ((c == 'ent-chest' && spec.matches('(?i).*(ent|chest|pulmon|thoracic|otorhin|respiratory|اذن|أذن|انف|أنف|صدر).*')) ||
+     (c == 'uro' && spec.matches('(?i).*(uro|urolog|مسالك|بولي|بولية).*')));
+  }
+  function quotaAfter(c,t) {
+   return getAfter(/databases/$(database)/documents/standaloneQuotas/$(c + '__' + t)).data;
+  }
+  match /standaloneQuotas/{key} {
+   allow get,list: if active() && (manager() || resource.data.teamId == user().get('teamId','_'));
+   allow create: if admin() && request.resource.data.keys().hasOnly(['campaign','teamId','limit','count']) &&
+    key == request.resource.data.campaign + '__' + request.resource.data.teamId &&
+    standaloneCampaign(request.resource.data.campaign,request.resource.data.teamId) &&
+    request.resource.data.limit == standaloneLimit(request.resource.data.campaign) &&
+    request.resource.data.count == 0;
+   allow update: if standaloneAccess(resource.data.teamId) &&
+    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count','mutation']) &&
+    request.resource.data.campaign == resource.data.campaign &&
+    request.resource.data.teamId == resource.data.teamId &&
+    request.resource.data.limit == resource.data.limit &&
+    request.resource.data.count >= 0 && request.resource.data.count <= resource.data.limit &&
+    request.resource.data.mutation.keys().hasOnly(['kind','choiceId','actor','at']) &&
+    request.resource.data.mutation.actor == request.auth.uid &&
+    request.resource.data.mutation.at == request.time &&
+    ((request.resource.data.mutation.kind == 'add' &&
+      request.resource.data.count == resource.data.count + 1 &&
+      !exists(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)) &&
+      existsAfter(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)) &&
+      getAfter(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)).data.teamId == resource.data.teamId &&
+      getAfter(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)).data.campaign == resource.data.campaign) ||
+     (request.resource.data.mutation.kind == 'remove' &&
+      request.resource.data.count == resource.data.count - 1 &&
+      exists(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)) &&
+      get(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)).data.teamId == resource.data.teamId &&
+      get(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)).data.campaign == resource.data.campaign &&
+      !existsAfter(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId))));
+   allow delete: if false;
+  }
+  match /standaloneChoices/{choiceId} {
+   allow get,list: if active() && (manager() || resource.data.teamId == user().get('teamId','_'));
+   allow create: if standaloneAccess(request.resource.data.teamId) &&
+    standaloneCampaign(request.resource.data.campaign,request.resource.data.teamId) &&
+    choiceId == request.resource.data.campaign + '__' + request.resource.data.teamId + '__' + request.resource.data.code &&
+    request.resource.data.keys().hasOnly(['campaign','teamId','code','actor','at']) &&
+    request.resource.data.keys().hasAll(['campaign','teamId','code','actor','at']) &&
+    request.resource.data.actor == request.auth.uid &&
+    request.resource.data.at == request.time &&
+    validStandaloneDoctor(request.resource.data.campaign,request.resource.data.teamId,request.resource.data.code) &&
+    quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.kind == 'add' &&
+    quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.choiceId == choiceId &&
+    quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.actor == request.auth.uid &&
+    quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.at == request.time;
+   allow update: if false;
+   allow delete: if standaloneAccess(resource.data.teamId) &&
+    choiceId == resource.data.campaign + '__' + resource.data.teamId + '__' + resource.data.code &&
+    quotaAfter(resource.data.campaign,resource.data.teamId).mutation.kind == 'remove' &&
+    quotaAfter(resource.data.campaign,resource.data.teamId).mutation.choiceId == choiceId &&
+    quotaAfter(resource.data.campaign,resource.data.teamId).mutation.actor == request.auth.uid &&
+    quotaAfter(resource.data.campaign,resource.data.teamId).mutation.at == request.time;
+  }
+
   match /imports/{id} { allow read,write: if admin(); match /rows/{row} { allow read,write: if admin(); } }
   match /audit/{id} {
    allow read: if manager();
