@@ -22,3 +22,5 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Customer roster imports use team-bound XLSX templates exclusively; Admin can download a blank template or edit the current roster using the same template. Validate file signature, team ID, headers, mandatory fields, duplicate codes, and numeric codes before replacing the full team list.
 
 - Admin-only customer deletion uses archive/soft removal across ALL team rosters; preserve historical activities and spend. Bulk delete limited to explicitly filtered results, typed confirmation, audit per transaction (10 customers), no concurrent imports. Re-uploading a roster can restore archived customers.
+
+- Match saved activities by customer code across all teams (not by doctor name); the shared ClientName component puts a compact calendar activity indicator on doctors anywhere their name appears in the UI. Directory Activity dropdown is part of cascading filters and offers with/without activity; cancelled counts as existing history, deleted does not.

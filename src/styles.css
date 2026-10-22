@@ -1784,3 +1784,28 @@ tfoot td {
 .customer-delete-button:hover:not(:disabled), .archive-bulk-button:hover:not(:disabled) { background:#ffe7e7; }
 .customer-admin-col { min-width:90px; }
 @media(max-width:680px) { .directory-actions { width:100%; } }
+
+/* Unified compact indicator for doctors who have a recorded activity */
+.client-name-with-activity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+  max-width: 100%;
+}
+.client-name-with-activity > span:first-child { min-width: 0; }
+.client-activity-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 23px;
+  height: 23px;
+  flex: 0 0 23px;
+  color: #087f7f;
+  background: #e6f6f3;
+  border: 1px solid #bce5df;
+  border-radius: 7px;
+  cursor: help;
+}
+.client-activity-indicator svg { display: block; }
+.activity-client-names .client-name-with-activity { margin-inline: 2px; }

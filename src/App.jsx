@@ -3,6 +3,7 @@ import {
   House,
   Users,
   CalendarBlank,
+  CalendarCheck,
   ChartBar,
   Gear,
   SquaresFour,
@@ -37,6 +38,7 @@ import {
 } from "firebase/auth";
 import { auth, request, resolveLogin } from "./firebase";
 import { EMPTY_SPECIALTY, directoryKeys, reportKeys, matchingRows, facetOptions, selectedOptions } from "./data/cascading-filters";
+import { activityCountsByCustomer, isDoctorClient, hasCustomerActivity } from "./data/activity-presence";
 import { demoData } from "./demo";
 import {
   equally,
@@ -77,6 +79,27 @@ const defaultDraft = () => ({
   notes: ``,
   clients: [],
 });
+/** A single activity indicator used wherever the doctor is named. */
+function ClientName({ client, activityCounts, customerKinds }) {
+  if (!client) return null;
+  const count = activityCounts.get(String(client.code)) || 0;
+  const doctor = isDoctorClient(client, customerKinds?.get(String(client.code)));
+  return (
+    <span className="client-name-with-activity">
+      <span>{client.name}</span>
+      {doctor && count > 0 && (
+        <span
+          className="client-activity-indicator"
+          role="img"
+          title={`لديه ${count} نشاط مسجل`}
+          aria-label={`لديه ${count} نشاط مسجل`}
+        >
+          <CalendarCheck size={15} weight="fill" aria-hidden="true" />
+        </span>
+      )}
+    </span>
+  );
+}
 function Field({ label, children, hint }) {
   return (
     <label className="field">
@@ -263,6 +286,7 @@ export function App() {
       area: ``,
       classification: ``,
       kind: ``,
+      activity: ``,
     }),
     [pageNo, setPageNo] = useState(1);
   function notify(message, type = `error`) {
@@ -303,6 +327,14 @@ export function App() {
   }, [filters]);
   const manager = data && [`admin`, `manager`].includes(data.profile.role);
   const allowed = routes.filter((r) => r.id !== `admin` || manager);
+  const activityCounts = useMemo(
+    () => activityCountsByCustomer(data?.activities || []),
+    [data?.activities],
+  );
+  const customerKinds = useMemo(
+    () => new Map((data?.customers || []).map(c => [String(c.code), c.kind])),
+    [data?.customers],
+  );
   const selectedTeam = data?.teams.find((t) => t.id === filters.team);
   const rosterMap = useMemo(
     () =>
@@ -326,18 +358,19 @@ export function App() {
     return data.customers.flatMap(c => {
       const base = {
         code: c.code, specialty: c.specialty || ``, area: c.area || ``, kind: c.kind || ``,
+        activity: hasCustomerActivity(activityCounts, c.code) ? `with` : `without`,
         searchText: `${c.name} ${c.code}`.toLocaleLowerCase(),
       };
       return (affiliations.get(c.code) || [{team: ``,classification: ``}])
         .map(member => ({...base,...member}));
     });
-  }, [data]);
+  }, [data, activityCounts]);
   const searchedDirectory = useMemo(() => {
     const search = filters.search.trim().toLocaleLowerCase();
     return search ? directoryRows.filter(row => row.searchText.includes(search)) : directoryRows;
   }, [directoryRows, filters.search]);
   const directoryOptions = useMemo(() =>
-    Object.fromEntries([`team`,`specialty`,`area`,`classification`].map(key=>[
+    Object.fromEntries([`team`,`specialty`,`area`,`classification`,`activity`].map(key=>[
       key,
       selectedOptions(facetOptions(searchedDirectory, filters, directoryKeys, key),filters[key]),
     ])), [searchedDirectory,filters]);
@@ -795,6 +828,21 @@ export function App() {
                       ))}
                   </select>
                 </Field>
+                <Field label="Activity">
+                  <select
+                    aria-label="فلتر العملاء حسب وجود نشاط"
+                    value={filters.activity}
+                    onChange={(e) => changeFilter(`activity`, e.target.value)}
+                  >
+                    <option value="">جميع العملاء</option>
+                    {directoryOptions.activity.includes(`with`) && (
+                      <option value="with">لديهم Activity</option>
+                    )}
+                    {directoryOptions.activity.includes(`without`) && (
+                      <option value="without">بدون Activity</option>
+                    )}
+                  </select>
+                </Field>
               </section>
               <section className="directory">
                 <div className="section-heading">
@@ -815,7 +863,7 @@ export function App() {
                     )}
                     <button className="text-button" onClick={() => {
                       setFilters({
-                        search: ``,team: ``,specialty: ``,area: ``,classification: ``,kind: ``,
+                        search: ``,team: ``,specialty: ``,area: ``,classification: ``,kind: ``,activity: ``,
                       });
                     }}>
                       مسح الفلاتر
@@ -861,7 +909,7 @@ export function App() {
                               </td>
                               <td className="code">{c.code}</td>
                               <td className="customer-name">
-                                {c.name}
+                                <ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} />
                                 <small className="mobile-only">
                                   {c.specialty} • {c.area}
                                 </small>
@@ -942,10 +990,10 @@ export function App() {
             <Dashboard data={data} onGo={() => setPage(`distribution`)} />
           )}
           {page === `activities` && (
-            <Activities data={data} onOpen={openActivity} />
+            <Activities data={data} onOpen={openActivity} activityCounts={activityCounts} customerKinds={customerKinds} />
           )}
           {page === `reports` && (
-            <Reports data={data} exportExcel={exportExcel} busy={busy} />
+            <Reports data={data} exportExcel={exportExcel} busy={busy} activityCounts={activityCounts} customerKinds={customerKinds} />
           )}
           {page === `admin` && manager && (
             <Admin
@@ -955,6 +1003,8 @@ export function App() {
               reload={reload}
               showAudit={showAudit}
               isDemo={isDemo}
+              activityCounts={activityCounts}
+              customerKinds={customerKinds}
             />
           )}
         </main>
@@ -983,7 +1033,7 @@ export function App() {
                   </span>
                   {draft.clients.length === 1 ? (
                     <>
-                      <h3>{draft.clients[0].name}</h3>
+                      <h3><ClientName client={draft.clients[0]} activityCounts={activityCounts} customerKinds={customerKinds} /></h3>
                       <span className="code-chip">{draft.clients[0].code}</span>
                       <p>
                         <Stethoscope size={16} />
@@ -1080,7 +1130,7 @@ export function App() {
                     <div className="client-heading">
                       <h3>
                         {draft.clients.length > 1
-                          ? c.name
+                          ? <ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} />
                           : `الفرق الزائرة المشاركة`}
                       </h3>
                       {draft.clients.length > 1 && (
@@ -1247,7 +1297,7 @@ export function App() {
                   {draft.actual !== null &&
                     draft.clients.map((c) => (
                       <div className="actual-client" key={c.code}>
-                        <b>{c.name}</b>
+                        <b><ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} /></b>
                         <Field label="حصة العميل الفعلية">
                           <AmountInput
                             type="number"
@@ -1398,7 +1448,7 @@ export function App() {
                       onChange={() => selectClient(c)}
                     />
                     <div>
-                      <b>{c.name}</b>
+                      <b><ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} /></b>
                       <small>
                         {c.code} • {c.specialty} • {c.area}
                       </small>
@@ -1605,7 +1655,7 @@ function TeamTable({ teams }) {
     </div>
   );
 }
-function Activities({ data, onOpen }) {
+function Activities({ data, onOpen, activityCounts, customerKinds }) {
   const [q, setQ] = useState(``),
     [status, setStatus] = useState(``);
   const rows = data.activities.filter(
@@ -1667,7 +1717,14 @@ function Activities({ data, onOpen }) {
                       <b>{a.type}</b>
                       <small className="row-sub code">{a.id.slice(-8)}</small>
                     </td>
-                    <td>{a.clients.map((c) => c.name).join(`، `)}</td>
+                    <td className="activity-client-names">
+                      {a.clients.map((c, index) => (
+                        <React.Fragment key={`${a.id}-${c.code}`}>
+                          {index > 0 && <span>، </span>}
+                          <ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} />
+                        </React.Fragment>
+                      ))}
+                    </td>
                     <td>{a.date || `غير مجدول`}</td>
                     <td className="numeric">{money(a.total)}</td>
                     <td className="numeric">
@@ -1691,7 +1748,7 @@ function Activities({ data, onOpen }) {
     </>
   );
 }
-function Reports({ data, exportExcel, busy }) {
+function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
   const [view, setView] = useState(`teams`),
     [filters, setFilters] = useState({
       month: ``,
@@ -1755,6 +1812,7 @@ function Reports({ data, exportExcel, busy }) {
     const g = groups.get(key) || {
       key,
       name,
+      client: view === `customers` ? r.client : null,
       planned: 0,
       actual: 0,
       count: new Set(),
@@ -1835,7 +1893,9 @@ function Reports({ data, exportExcel, busy }) {
               {[...groups.values()].map((g) => (
                 <tr key={g.key}>
                   <td>
-                    <b>{g.name}</b>
+                    <b>{view === `customers` ? (
+                      <ClientName client={g.client} activityCounts={activityCounts} customerKinds={customerKinds} />
+                    ) : g.name}</b>
                     {view === `customers` && (
                       <small className="row-sub code">{g.key}</small>
                     )}
@@ -1880,7 +1940,7 @@ function Reports({ data, exportExcel, busy }) {
     </>
   );
 }
-function Admin({ data, perform, notify, reload, showAudit, isDemo }) {
+function Admin({ data, perform, notify, reload, showAudit, isDemo, activityCounts, customerKinds }) {
   const [tab, setTab] = useState(`teams`),
     [busy, setBusy] = useState(false),
     [team, setTeam] = useState({ id: ``, name: ``, budget: `` }),
@@ -2375,7 +2435,13 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo }) {
                   <tbody>
                     {mapped.slice(0, 8).map((row, i) => (
                       <tr key={i}>
-                        {columns.map((c) => <td key={c.key}>{row[c.key] || `—`}</td>)}
+                        {columns.map((c) => (
+                          <td key={c.key}>
+                            {c.key === `name` ? (
+                              <ClientName client={row} activityCounts={activityCounts} customerKinds={customerKinds} />
+                            ) : row[c.key] || `—`}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
