@@ -273,7 +273,9 @@ service cloud.firestore {
    allow update: if (request.resource.data.mutation.kind in ['saveActivity','deleteActivity'] && activityFinance()) || metadataFinance() || importFinance() || archiveFinance();
   }
   match /activities/{activityId} {
-   allow read: if active() && (!teamVisibilityRestricted() || resource.data.teamIds.hasAny([user().teamId]));
+   // Empty IDs can be checked during creation. Existing data stays protected.
+   allow get: if active() && (resource == null || !teamVisibilityRestricted() || resource.data.teamIds.hasAny([user().teamId]));
+   allow list: if active() && (!teamVisibilityRestricted() || resource.data.teamIds.hasAny([user().teamId]));
    allow create: if commitActivity(request.resource.data,null,activityId) && receipt(request.resource.data,activityId,null);
    allow update: if (commitActivity(request.resource.data,resource.data,activityId) ||
     (active() && request.resource.data.status == 'deleted' && resource.data.status == 'planned' && resource.data.actual == null &&
