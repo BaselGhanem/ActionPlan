@@ -49,12 +49,13 @@ async function load(){const p=await profile();let f=await getDoc(financeRef);if(
  const limited=p.role==="team"&&ownVisibility?.exists()&&ownVisibility.data().showOtherTeams===false;
  const allTeams=Object.entries(financial.teams).map(([id,t])=>({id,...t,uploading:financial.pausedTeams?.includes(id)||false}));
  const teams=limited?allTeams.filter(t=>t.id===p.teamId):allTeams;
- const [c,a,u,quotas,choices]=await Promise.all([
+ const [c,a,u,quotas,choices,teamVisibility]=await Promise.all([
   limited?getDocs(query(collection(db,`customers`),where(`visitingTeams`,`array-contains`,p.teamId))):getDocs(collection(db,`customers`)),
   limited?getDocs(query(collection(db,`activities`),where(`teamIds`,`array-contains`,p.teamId))):getDocs(query(collection(db,`activities`),where(`year`,`==`,2027))),
   p.role===`admin`?getDocs(collection(db,`users`)):null,
   p.role===`team`?getDocs(query(collection(db,`standaloneQuotas`),where(`teamId`,`==`,p.teamId))):getDocs(collection(db,`standaloneQuotas`)),
   p.role===`team`?getDocs(query(collection(db,`standaloneChoices`),where(`teamId`,`==`,p.teamId))):getDocs(collection(db,`standaloneChoices`)),
+  p.role===`admin`?getDocs(collection(db,`teamVisibility`)):null,
  ]);
  const customers=list(c).filter(c=>c.deleted!==true).map(c=>limited?{
   code:c.code,name:c.name,kind:c.kind,specialty:c.specialty,area:c.area,
@@ -74,6 +75,7 @@ async function load(){const p=await profile();let f=await getDoc(financeRef);if(
  });
  return {profile:p,teams,customers,rosters,activities,visibilityHidden:limited,
   settings:{types:financial.types},users:u?list(u).filter(u=>u.current!==false):[],
+  teamVisibility:teamVisibility?list(teamVisibility):[],
   standalone:{quotas:list(quotas),choices:list(choices)}};}
 async function saveActivity(payload,deleting=false){const p=await profile(),activityId=payload.id||id(),r=doc(db,`activities/${activityId}`);
  const [initialFinance,initialActivity]=await Promise.all([getDoc(financeRef),getDoc(r)]);
