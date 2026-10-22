@@ -111,3 +111,21 @@ test(`new model distributes directly to teams, not clients`,()=>{
  a.status=`executed`;
  assert.deepEqual(charges(a),{a:5500,b:3500});
 });
+
+test("activity cost purposes reconcile to one total, independent of team budget",()=>{
+ const a={
+  type:"غداء عمل",status:"planned",date:"2027-04-05",notes:"",
+  total:150000,actual:null,clients:[{code:"C1",name:"د. عمر"}],
+  teamShares:[{teamId:"cardio",amount:90000,actual:null},{teamId:"primary",amount:60000,actual:null}],
+  costItems:[
+   {id:"cost-client",category:"client",label:"تكلفة مرتبطة بالعميل",amount:100000},
+   {id:"cost-lunch",category:"meal",label:"غداء / ضيافة",amount:50000},
+  ],
+ };
+ assert.doesNotThrow(()=>validateActivity(a));
+ assert.deepEqual(charges(a),{cardio:90000,primary:60000});
+ assert.throws(()=>validateActivity({...a,costItems:a.costItems.map((x,i)=>i?{...x,amount:40000}:x)}),/مجموع تفاصيل/);
+ assert.throws(()=>validateActivity({...a,costItems:[a.costItems[0],a.costItems[0]]}),/مكررا/);
+ assert.throws(()=>validateActivity({...a,costItems:[{...a.costItems[0],amount:-1}]}),/غير صحيح/);
+ assert.doesNotThrow(()=>validateActivity({...a,costItems:[]}));
+});

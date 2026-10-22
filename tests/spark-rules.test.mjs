@@ -146,3 +146,30 @@ test(`admin upgrades an activity from a team owner without changing creator`,asy
  };
  await assertSucceeds(persist(db(`admin`),`cross-owner`,next,{uid:`admin`,accountId:`admin`}));
 });
+
+test("saved client cost 1000 + lunch 500 matches activity 1500 without double budget charge",async()=>{
+ const a={type:"ندوة",total:150000,actual:null,status:"planned",date:"2027-05-14",notes:"lunch",
+  clients:[{code:"C0",name:"طبيب 0",kind:"طبيب",specialty:"قلب",area:"عمان"}],
+  teamShares:[{teamId:"t0",amount:100000,actual:null},{teamId:"t1",amount:50000,actual:null}],
+  costItems:[
+   {id:"cost-client",category:"client",label:"تكلفة مرتبطة بالعميل",amount:100000},
+   {id:"cost-lunch",category:"meal",label:"غداء / ضيافة",amount:50000},
+  ],
+ };
+ await assertSucceeds(persist(db(),"cost-breakdown",a));
+ const stored=(await getDoc(doc(db(),"activities/cost-breakdown"))).data();
+ assert.equal(stored.costItems.length,2);
+ assert.equal(stored.costItems.reduce((n,x)=>n+x.amount,0),150000);
+ assert.equal((await getDoc(doc(db(),"finance/2027"))).data().teams.t0.used,100000);
+ assert.equal((await getDoc(doc(db(),"finance/2027"))).data().teams.t1.used,50000);
+});
+test("Firestore rejects tampered item sums and invalid cost categories",async()=>{
+ const a={type:"ندوة",total:10000,actual:null,status:"planned",date:"",notes:"",
+  clients:[{code:"C0",name:"طبيب 0",kind:"طبيب",specialty:"قلب",area:"عمان"}],
+  teamShares:[{teamId:"t0",amount:10000,actual:null}],
+  costItems:[{id:"cost-1",category:"meal",label:"غداء",amount:10000}],
+ };
+ await assertFails(persist(db(),"bad-cost-total",a,{tamper:x=>({...x,costItems:[{...x.costItems[0],amount:9000}]})}));
+ await assertFails(persist(db(),"bad-cost-kind",a,{tamper:x=>({...x,costItems:[{...x.costItems[0],category:"unapproved"}]})}));
+ await assertFails(persist(db(),"bad-cost-label",a,{tamper:x=>({...x,costItems:[{...x.costItems[0],label:""}]})}));
+});
