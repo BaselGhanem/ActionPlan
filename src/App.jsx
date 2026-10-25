@@ -952,7 +952,7 @@ export function App() {
             <Standalone data={data} busy={busy}
               onInit={async()=>{
                 try{setBusy(true);if(isDemo){notify("هذا وضع المعاينة", "success");return;}
-                  await request("standaloneInit");await reload();notify("تم تهيئة حصص Stand Alone", "success");
+                  await request("standaloneInit");await reload();notify("تم تهيئة مسارات Stand Alone وPedia Activity", "success");
                 }catch(e){notify(e.message);}finally{setBusy(false);}
               }}
               onChoose={async item=>{
