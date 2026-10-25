@@ -65,7 +65,7 @@ export function Standalone({data,busy,onChoose,onInit}){
   </section>:<p className="standalone-notice">لم يتم العثور على اي فريق مخول لمسارات الاختيار المتاحة</p>}
   {privileged&&<section className="surface standalone-matching">
    <h3><UsersThree size={21}/> Matching — للأدمن والإدارة فقط</h3>
-   <p>كل فريق له حصته المستقلة. الطبيب المشترك بين فريقين يُحسب مرة واحدة عند حساب إجمالي الأطباء الفريدين في المسار.</p>
+   <p>اختيارات الفرق مستقلة، ويُحسب الطبيب المشترك مرة واحدة ضمن إجمالي الأطباء الفريدين. لا توجد حصة رقمية محددة لمسار Pedia Activity.</p>
    {matched.filter(m=>groups.some(g=>g.id===m.id)).map(m=><div key={m.id} className="standalone-match-block">
     <div className="standalone-match-head"><b>{m.title}</b>
      <span>أطباء فريدون: <strong>{m.unique}</strong> • مشتركون: <strong>{m.matches.length}</strong></span></div>
