@@ -27,7 +27,7 @@ export function selectionLabelsByCustomer(choices=[]){
   if(!code||!label)continue;
   const labels=result.get(code)||new Set();labels.add(label);result.set(code,labels);
  }
- return new Map([...result].map(([code,labels])=>[code,[...labels].sort((a,b)=>a===`Pedia Activity`?-1:b===`Pedia Activity`?1:0)]));
+ return new Map([...result].map(([code,labels])=>[code,[...labels].sort((a,b)=>Number(b===`Pedia Activity`)-Number(a===`Pedia Activity`))]));
 }
 export function visibleStandaloneGroups(teams,profile){
  const privileged=profile?.role==="admin";
