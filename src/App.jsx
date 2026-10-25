@@ -45,6 +45,7 @@ import {withHonorariumParticipants} from "./data/cost-items";
 import { TeamActivityDialog } from "./components/TeamActivityDialog";
 import { ActualTracking } from "./components/ActualTracking";
 import { Standalone } from "./components/Standalone";
+import {selectionLabelsByCustomer} from "./data/standalone.js";
 import { IncomingExpenses } from "./components/IncomingExpenses";
 import { demoData } from "./demo";
 import {downloadLocalDirectory} from "./data/customer-cache.js";
@@ -97,9 +98,10 @@ const defaultDraft = () => ({
   ],
 });
 /** A single activity indicator used wherever the doctor is named. */
-function ClientName({ client, activityCounts, customerKinds }) {
+function ClientName({ client, activityCounts, customerKinds, selectionLabels }) {
   if (!client) return null;
   const count = activityCounts.get(String(client.code)) || 0;
+  const labels = selectionLabels?.get(String(client.code)) || [];
   return (
     <span className="client-name-with-activity">
       <span>{client.name}</span>
@@ -113,6 +115,7 @@ function ClientName({ client, activityCounts, customerKinds }) {
           <CalendarCheck size={15} weight="fill" aria-hidden="true" />
         </span>
       )}
+      {labels.map(label=><span key={label} className={`client-selection-label ${label===`Pedia Activity`?`is-pedia`:`is-standalone`}`} title={`تم اختياره ضمن ${label}`}>{label}</span>)}
     </span>
   );
 }
@@ -361,6 +364,10 @@ export function App() {
   const customerKinds = useMemo(
     () => new Map((data?.customers || []).map(c => [String(c.code), c.kind])),
     [data?.customers],
+  );
+  const selectionLabels = useMemo(
+    () => selectionLabelsByCustomer(data?.standalone?.choices || []),
+    [data?.standalone?.choices],
   );
   const selectedTeam = data?.teams.find((t) => t.id === filters.team);
   const rosterMap = useMemo(
@@ -855,7 +862,7 @@ export function App() {
                               </td>
                               <td className="code">{c.code}</td>
                               <td className="customer-name">
-                                <ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} />
+                                <ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} selectionLabels={selectionLabels} />
                                 <small className="mobile-only">
                                   {c.specialty} • {c.area}
                                 </small>
@@ -939,7 +946,7 @@ export function App() {
             <Dashboard data={data} onGo={() => setPage(`distribution`)} />
           )}
           {page === `activities` && (
-            <Activities data={data} onOpen={openActivity} activityCounts={activityCounts} customerKinds={customerKinds} />
+            <Activities data={data} onOpen={openActivity} activityCounts={activityCounts} customerKinds={customerKinds} selectionLabels={selectionLabels} />
           )}
           {page === `standalone` && (
             <Standalone data={data} busy={busy}
@@ -966,7 +973,7 @@ export function App() {
               onSave={value=>persistActivity(value,false)} />
           )}
           {page === `reports` && (
-            <Reports data={data} exportExcel={exportExcel} busy={busy} activityCounts={activityCounts} customerKinds={customerKinds} />
+            <Reports data={data} exportExcel={exportExcel} busy={busy} activityCounts={activityCounts} customerKinds={customerKinds} selectionLabels={selectionLabels} />
           )}
           {page === `admin` && manager && (
             <Admin
@@ -977,7 +984,7 @@ export function App() {
               showAudit={showAudit}
               isDemo={isDemo}
               activityCounts={activityCounts}
-              customerKinds={customerKinds}
+              customerKinds={customerKinds} selectionLabels={selectionLabels}
             />
           )}
         </main>
@@ -995,7 +1002,7 @@ export function App() {
           onClose={()=>setDraft(null)}
           onSave={()=>persistActivity(draft,true).catch(()=>{})}
           onPick={()=>{setPickerSearch(``);setPicker(true);}}
-          renderName={c=><ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds}/>}
+          renderName={c=><ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} selectionLabels={selectionLabels}/>}
           onDelete={oldDraft&&oldDraft.actual===null&&oldDraft.status===`planned`?()=>{
             setConfirm({
               title:`حذف النشاط؟`,
@@ -1048,7 +1055,7 @@ export function App() {
                       onChange={() => selectClient(c)}
                     />
                     <div>
-                      <b><ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} /></b>
+                      <b><ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} selectionLabels={selectionLabels} /></b>
                       <small>
                         {c.code} • {c.specialty} • {c.area}
                       </small>
@@ -1256,7 +1263,7 @@ function TeamTable({ teams, dashboard = false }) {
   );
 }
 
-function Activities({ data,onOpen,activityCounts,customerKinds }){
+function Activities({ data,onOpen,activityCounts,customerKinds , selectionLabels }){
  const [f,setF]=useState({search:"",team:data.visibilityHidden?data.profile.teamId:"",specialty:"",area:"",classification:"",type:"",status:""});
  useEffect(()=>{
   if(data.visibilityHidden&&data.teams.length===1)setF(prev=>prev.team===data.profile.teamId?prev:{...prev,team:data.profile.teamId,classification:""});
@@ -1312,7 +1319,7 @@ function Activities({ data,onOpen,activityCounts,customerKinds }){
     return <tr key={a.id}>
      <td><b>{a.type}</b><small className="row-sub">{a.creatorTeamName||"الإدارة"} • {a.id.slice(-8)}</small></td>
      <td className="activity-client-names">{a.clients.map((c,i)=><React.Fragment key={`${a.id}-${c.code}`}>
-      {i>0&&<span>، </span>}<ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds}/>
+      {i>0&&<span>، </span>}<ClientName client={c} activityCounts={activityCounts} customerKinds={customerKinds} selectionLabels={selectionLabels}/>
      </React.Fragment>)}</td>
      <td>{a.date||"غير مجدول"}</td><td className="numeric">{money(a.total)}</td>
      {target&&<td className="numeric"><b>{share?money(share.amount):"—"}</b></td>}
@@ -1325,7 +1332,7 @@ function Activities({ data,onOpen,activityCounts,customerKinds }){
   </table></div>{!rows.length&&<Empty text="لا توجد أنشطة تطابق الفلاتر"/>}</section>
  </>;
 }
-function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
+function Reports({ data, exportExcel, busy, activityCounts, customerKinds , selectionLabels }) {
   const [view, setView] = useState(`teams`),
     [filters, setFilters] = useState({
       month: ``,
@@ -1486,7 +1493,7 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
                 <tr key={g.key}>
                   <td>
                     <b>{view === `customers` ? (
-                      <ClientName client={g.client} activityCounts={activityCounts} customerKinds={customerKinds} />
+                      <ClientName client={g.client} activityCounts={activityCounts} customerKinds={customerKinds} selectionLabels={selectionLabels} />
                     ) : g.name}</b>
                     {view === `customers` && (
                       <small className="row-sub code">{g.key}</small>
@@ -1524,7 +1531,7 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds }) {
     </>
   );
 }
-function Admin({ data, perform, notify, reload, showAudit, isDemo, activityCounts, customerKinds }) {
+function Admin({ data, perform, notify, reload, showAudit, isDemo, activityCounts, customerKinds , selectionLabels }) {
   const [tab, setTab] = useState(`teams`),
     [busy, setBusy] = useState(false),
     [team, setTeam] = useState({ id: ``, name: ``, budget: `` }),
@@ -2045,7 +2052,7 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo, activityCount
                         {columns.map((c) => (
                           <td key={c.key}>
                             {c.key === `name` ? (
-                              <ClientName client={row} activityCounts={activityCounts} customerKinds={customerKinds} />
+                              <ClientName client={row} activityCounts={activityCounts} customerKinds={customerKinds} selectionLabels={selectionLabels} />
                             ) : row[c.key] || `—`}
                           </td>
                         ))}
