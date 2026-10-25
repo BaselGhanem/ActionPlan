@@ -2077,3 +2077,6 @@ tfoot td {
 @media(max-width:1100px){.standalone-campaign-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:790px){.standalone-campaign-tabs{grid-template-columns:1fr}.standalone-campaign>small{min-height:0}}
 @media(max-width:480px){.standalone-doctor-name-line{gap:5px}.client-selection-label{font-size:9px;padding:3px 7px}.standalone-campaign{padding:15px}}
+
+.standalone-matched-name{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0}
+.standalone-matched-name b{overflow-wrap:anywhere}
