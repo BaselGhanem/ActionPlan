@@ -8,7 +8,7 @@ const db=(id)=>env.authenticatedContext(id).firestore();
 const quota=(d,group)=>doc(d,"standaloneQuotas/"+group);
 const choice=(d,group,code)=>doc(d,"standaloneChoices/"+group+"__"+code);
 const docData=(code,specialty,kind="طبيب")=>({code,name:"طبيب "+code,kind,specialty,area:"عمان",
- visitingTeams:["A","M","U"],visits:{A:{roster:"rA",classification:"A"},M:{roster:"rM",classification:"B"},U:{roster:"rU",classification:"A"}}});
+ visitingTeams:["A","M","U","C","X"],visits:{A:{roster:"rA",classification:"A"},M:{roster:"rM",classification:"B"},U:{roster:"rU",classification:"A"},C:{roster:"rC",classification:"A"},X:{roster:"rX",classification:"A"}}});
 const budget=(name,id)=>({name,budget:1000000,used:0,roster:"r"+id,accountId:id});
 const profile=(id,role,teamId=null)=>({name:id,username:id,role,accountId:id,teamId,active:true,current:true});
 before(async()=>{env=await initializeTestEnvironment({projectId:"demo-standalone-security",
@@ -19,22 +19,26 @@ beforeEach(async()=>{
  await env.withSecurityRulesDisabled(async ctx=>{
   const d=ctx.firestore();
   await Promise.all([
-   setDoc(doc(d,"finance/2027"),{teams:{A:budget("Azord","A"),M:budget("Matador","M"),U:budget("URO","U")},types:["ندوة"],mutation:null}),
+   setDoc(doc(d,"finance/2027"),{teams:{A:budget("Azord","A"),M:budget("Matador","M"),U:budget("URO","U"),C:budget(`Clavodar`,`C`),X:budget(`Mixif`,`X`)},types:["ندوة"],mutation:null}),
    setDoc(doc(d,"users/admin"),profile("admin","admin")),
    setDoc(doc(d,"users/manager"),profile("manager","manager")),
    setDoc(doc(d,"users/a"),profile("a","team","A")),
    setDoc(doc(d,"users/m"),profile("m","team","M")),
    setDoc(doc(d,"users/u"),profile("u","team","U")),
+   setDoc(doc(d,`users/c`),profile(`c`,`team`,`C`)),
+   setDoc(doc(d,`users/x`),profile(`x`,`team`,`X`)),
    setDoc(doc(d,"customers/C0"),docData("C0","ENT")),
    setDoc(doc(d,"customers/C1"),docData("C1","Chest")),
    setDoc(doc(d,"customers/C2"),docData("C2","Urology")),
    setDoc(doc(d,"customers/C3"),docData("C3","ENT","صيدلية")),
+   setDoc(doc(d,`customers/C4`),docData(`C4`,`Pediatrics`)),
+   setDoc(doc(d,`customers/C5`),docData(`C5`,`طب الأطفال`)),
   ]);
  });
 });
 const bootstrap=async()=>{
  const d=db("admin");
- for(const [campaign,t,limit] of [["ent-chest","A",35],["ent-chest","M",35],["uro","M",25],["uro","U",25]])
+ for(const [campaign,t,limit] of [["ent-chest","A",35],["ent-chest","M",35],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
   await assertSucceeds(setDoc(quota(d,campaign+"__"+t),{campaign,teamId:t,limit,count:0}));
 };
 async function toggle(identity,campaign,teamId,code,selected=true){
@@ -58,7 +62,7 @@ test("only admin can initialize a quota, no other team can list or fetch another
  await assertFails(getDoc(quota(db("a"),"ent-chest__M")));
  await assertFails(getDocs(collection(db("a"),"standaloneQuotas")));
  const own=await assertSucceeds(getDocs(query(collection(db("a"),"standaloneQuotas"),where("teamId","==","A"))));
- assert.equal(own.docs.length,1);
+ assert.equal(own.docs.length,2);
 });
 test("Azord and Matador can select same ENT doctor without exposing each other's selections",async()=>{
  await bootstrap();
@@ -87,6 +91,24 @@ test("specialty, type, team, quota, direct writes are guarded at Firestore level
  await assertFails(updateDoc(quota(db("a"),"ent-chest__A"),{count:35}));
  await env.withSecurityRulesDisabled(async ctx=>{await updateDoc(quota(ctx.firestore(),"ent-chest__A"),{count:35});});
  await assertFails(toggle("a","ent-chest","A","C0"));
+});
+
+test(`Pedia Activity enforces exactly Azord, Clavodar and Mixif, with independent non-financial selections`,async()=>{
+ await bootstrap();
+ await assertSucceeds(toggle(`a`,`pedia`,`A`,`C4`));
+ await assertSucceeds(toggle(`c`,`pedia`,`C`,`C4`));
+ await assertSucceeds(toggle(`x`,`pedia`,`X`,`C5`));
+ await assert.equal((await getDoc(quota(db(`c`),`pedia__C`))).data().count,1);
+ await assert.equal((await getDoc(quota(db(`x`),`pedia__X`))).data().limit,0);
+ await assertFails(toggle(`m`,`pedia`,`M`,`C4`));
+ await assertFails(toggle(`u`,`pedia`,`U`,`C4`));
+ await assertFails(toggle(`a`,`pedia`,`A`,`C0`));
+ await assertFails(toggle(`a`,`pedia`,`A`,`C3`));
+ await assertFails(getDoc(choice(db(`a`),`pedia__C`,`C4`)));
+ const all=await assertSucceeds(getDocs(collection(db(`admin`),`standaloneChoices`)));
+ assert.equal(all.size,3);
+ await assertSucceeds(toggle(`c`,`pedia`,`C`,`C4`,false));
+ assert.equal((await getDoc(quota(db(`c`),`pedia__C`))).data().count,0);
 });
 
 test("admin can independently restrict one team; Firestore blocks unrelated customers and activities",async()=>{
