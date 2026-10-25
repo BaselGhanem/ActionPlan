@@ -316,9 +316,10 @@ service cloud.firestore {
    let f=get(/databases/$(database)/documents/finance/2027).data;
    let name=f.teams.get(t,{}).get('name','');
    return (c == 'ent-chest' && name.matches('(?i)(azord|matador)')) ||
-    (c == 'uro' && name.matches('(?i)(uro|matador)'));
+    (c == 'uro' && name.matches('(?i)(uro|matador)')) ||
+     (c == 'pedia' && name.matches('(?i)(azord|clavodar|mixif)'));
   }
-  function standaloneLimit(c) { return c == 'ent-chest' ? 35 : 25; }
+  function standaloneLimit(c) { return c == 'ent-chest' ? 35 : c == 'uro' ? 25 : c == 'pedia' ? 0 : -1; }
   function validStandaloneDoctor(c,t,code,encodedCode) {
    let doctor=get(/databases/$(database)/documents/customers/$(encodedCode)).data;
    let spec=doctor.get('specialty','');
@@ -326,7 +327,8 @@ service cloud.firestore {
     doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') &&
     doctor.visitingTeams.hasAny([t]) &&
     ((c == 'ent-chest' && spec.matches('(?i).*(ent|chest|pulmon|thoracic|otorhin|respiratory|اذن|أذن|انف|أنف|صدر).*')) ||
-     (c == 'uro' && spec.matches('(?i).*(uro|urolog|مسالك|بولي|بولية).*')));
+     (c == 'uro' && spec.matches('(?i).*(uro|urolog|مسالك|بولي|بولية).*')) ||
+     (c == 'pedia' && spec.matches('(?i).*(pedia|paedia|pediatr|paediatr|أطفال|اطفال|طفل).*')));
   }
   function quotaAfter(c,t) {
    return getAfter(/databases/$(database)/documents/standaloneQuotas/$(c + '__' + t)).data;
@@ -343,7 +345,7 @@ service cloud.firestore {
     request.resource.data.campaign == resource.data.campaign &&
     request.resource.data.teamId == resource.data.teamId &&
     request.resource.data.limit == resource.data.limit &&
-    request.resource.data.count >= 0 && request.resource.data.count <= resource.data.limit &&
+    request.resource.data.count >= 0 && (resource.data.limit == 0 || request.resource.data.count <= resource.data.limit) &&
     request.resource.data.mutation.keys().hasOnly(['kind','choiceId','actor','at']) &&
     request.resource.data.mutation.actor == request.auth.uid &&
     request.resource.data.mutation.at == request.time &&
