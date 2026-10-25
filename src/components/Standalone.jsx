@@ -2,12 +2,12 @@ import React,{useMemo,useState,useEffect} from "react";
 import {Target,UsersThree,MagnifyingGlass,Check,Plus,ArrowClockwise,ShieldCheck} from "@phosphor-icons/react";
 import {visibleStandaloneGroups,matchStandAlone,eligibleDoctor,STANDALONE_CAMPAIGNS,selectionLabelsByCustomer} from "../data/standalone.js";
 
-export function Standalone({data,busy,onChoose,onInit}){
+export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const [active,setActive]=useState("");
  const [search,setSearch]=useState("");
  const [onlySelected,setOnlySelected]=useState(false);
  const profile=data.profile,privileged=profile.role==="admin";
- const groups=useMemo(()=>visibleStandaloneGroups(data.teams,profile),[data.teams,profile]);
+ const groups=useMemo(()=>visibleStandaloneGroups(data.teams,profile).filter(g=>mode==="pedia"?g.id==="pedia":g.id!=="pedia"),[data.teams,profile,mode]);
  const enabled=new Map((data.standalone?.quotas||[]).map(q=>[q.campaign+"__"+q.teamId,q]));
  const choices=data.standalone?.choices||[];
  const selectionLabels=useMemo(()=>selectionLabelsByCustomer(choices),[choices]);
@@ -25,7 +25,7 @@ export function Standalone({data,busy,onChoose,onInit}){
  const matched=useMemo(()=>matchStandAlone(choices,groups),[choices,groups]);
  return <div className="standalone-page">
   <div className="section-heading">
-   <div><h2>Stand Alone & Pedia Activity</h2><p>مسارات اختيار مستقلة للأطباء، دون تأثير على الأنشطة المالية أو ميزانيات الفرق</p></div>
+   <div><h2>{mode==="pedia"?"Pedia Activity":"Stand Alone"}</h2><p>مسارات اختيار مستقلة للأطباء، دون تأثير على الأنشطة المالية أو ميزانيات الفرق</p></div>
    {profile.role==="admin"&&<button className="primary" disabled={busy} onClick={onInit}><ShieldCheck size={17}/> تهيئة مسارات الاختيار</button>}
   </div>
   <div className="standalone-campaign-tabs">
@@ -65,7 +65,7 @@ export function Standalone({data,busy,onChoose,onInit}){
   </section>:<p className="standalone-notice">لم يتم العثور على اي فريق مخول لمسارات الاختيار المتاحة</p>}
   {privileged&&<section className="surface standalone-matching">
    <h3><UsersThree size={21}/> Matching — للأدمن والإدارة فقط</h3>
-   <p>اختيارات الفرق مستقلة، ويُحسب الطبيب المشترك مرة واحدة ضمن إجمالي الأطباء الفريدين. لا توجد حصة رقمية محددة لمسار Pedia Activity.</p>
+   <p>اختيارات الفرق مستقلة، ويُحسب الطبيب المشترك مرة واحدة ضمن إجمالي الأطباء الفريدين.</p>
    {matched.filter(m=>groups.some(g=>g.id===m.id)).map(m=><div key={m.id} className="standalone-match-block">
     <div className="standalone-match-head"><b>{m.title}</b>
      <span>أطباء فريدون: <strong>{m.unique}</strong> • مشتركون: <strong>{m.matches.length}</strong></span></div>
