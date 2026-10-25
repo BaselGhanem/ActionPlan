@@ -74,6 +74,7 @@ const routes = [
   { id: `distribution`, title: `العملاء / توزيع الأنشطة`, icon: Users },
   { id: `activities`, title: `الأنشطة`, icon: CalendarBlank },
   { id: `standalone`, title: `Stand Alone`, icon: Target },
+  { id: `pedia`, title: `Pedia Activity`, icon: Stethoscope },
   { id: `actuals`, title: `الفعلي والمتابعة`, icon: CheckCircle },
   { id: `incoming`, title: `مصاريف الفرق الواردة`, icon: UsersThree },
   { id: `reports`, title: `التقارير`, icon: ChartBar },
@@ -356,7 +357,7 @@ export function App() {
   },[data?.visibilityHidden,data?.teams]);
   const directoryPageSize=50;
   const manager = data && [`admin`, `manager`].includes(data.profile.role);
-  const allowed = routes.filter((r) => (r.id !== `admin` || manager) && (r.id !== `standalone` || data?.profile.role !== `manager`));
+  const allowed = routes.filter((r) => (r.id !== `admin` || manager) && (![`standalone`,`pedia`].includes(r.id) || data?.profile.role !== `manager`));
   const activityCounts = useMemo(
     () => activityCountsByCustomer(data?.activities || []),
     [data?.activities],
@@ -948,8 +949,8 @@ export function App() {
           {page === `activities` && (
             <Activities data={data} onOpen={openActivity} activityCounts={activityCounts} customerKinds={customerKinds} selectionLabels={selectionLabels} />
           )}
-          {page === `standalone` && (
-            <Standalone data={data} busy={busy}
+          {(page === `standalone` || page === `pedia`) && (
+            <Standalone key={page} mode={page} data={data} busy={busy}
               onInit={async()=>{
                 try{setBusy(true);if(isDemo){notify("هذا وضع المعاينة", "success");return;}
                   await request("standaloneInit");await reload();notify("تم تهيئة مسارات Stand Alone وPedia Activity", "success");
