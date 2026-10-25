@@ -171,7 +171,7 @@ async function initializeStandAlone(){
  const p=await profile();admin(p);
  const f=(await getDoc(financeRef)).data(),teams=Object.entries(f.teams).map(([id,t])=>({id,...t}));
  const configs=visibleStandaloneGroups(teams,p);
- fail(configs.length>0,"أضف فرق Azord وMatador وURO أولا");
+ fail(configs.length>0,`أضف الفرق المؤهلة لمسارات Standalone أو Pedia Activity أولا`);
  for(const g of configs){
   const ref=doc(db,`standaloneQuotas/${g.key}`);
   await runTransaction(db,async tx=>{
@@ -197,7 +197,7 @@ async function chooseStandAlone({campaign,teamId,code,selected}){
   fail(customer.exists()&&customer.data().deleted!==true&&eligibleDoctor(campaign,customer.data(),teamId),"الطبيب غير مدرج بفريقك أو غير مطابق للتخصص");
   if(selected===choice.exists())return;
   const next=q.data().count+(selected?1:-1);
-  fail(next>=0&&next<=q.data().limit,`الحد الأقصى لهذا الفريق: ${q.data().limit} طبيب`);
+  fail(next>=0&&(q.data().limit===0||next<=q.data().limit),q.data().limit===0?`عدد الاختيارات غير صالح`:`الحد الأقصى لهذا الفريق: ${q.data().limit} طبيب`);
   const mutation={kind:selected?"add":"remove",choiceId,actor:uid(),at:serverTimestamp()};
   if(selected)tx.set(choiceRef,{campaign,teamId,code,encodedCode:encodeURIComponent(code),actor:uid(),at:serverTimestamp()});
   else tx.delete(choiceRef);
