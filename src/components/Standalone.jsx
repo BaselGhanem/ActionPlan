@@ -71,7 +71,7 @@ export function Standalone({data,busy,onChoose,onInit}){
      <span>أطباء فريدون: <strong>{m.unique}</strong> • مشتركون: <strong>{m.matches.length}</strong></span></div>
     <div className="standalone-match-stats">{m.byTeam.map(t=><span key={t.teamId}>{data.teams.find(x=>x.id===t.teamId)?.name}: <b>{t.count}</b>{m.quota>0?` / ${m.quota}`:``}</span>)}</div>
     {m.matches.length?<div className="standalone-matched-doctors">
-     {m.matches.map(x=><div key={x.code}><b>{data.customers.find(c=>c.code===x.code)?.name||x.code}</b><small>{x.code} • {x.teams.map(t=>data.teams.find(z=>z.id===t)?.name||t).join(" + ")}</small></div>)}
+     {m.matches.map(x=><div key={x.code}><div className="standalone-matched-name"><b>{data.customers.find(c=>c.code===x.code)?.name||x.code}</b>{(selectionLabels.get(String(x.code))||[]).map(label=><span key={label} className={`client-selection-label ${label===`Pedia Activity`?`is-pedia`:`is-standalone`}`}>{label}</span>)}</div><small>{x.code} • {x.teams.map(t=>data.teams.find(z=>z.id===t)?.name||t).join(" + ")}</small></div>)}
     </div>:<p className="standalone-empty">لا يوجد تطابق بين اختيارات الفرق في هذا المسار بعد</p>}
    </div>)}
   </section>}
