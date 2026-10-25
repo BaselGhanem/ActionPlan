@@ -100,11 +100,10 @@ const defaultDraft = () => ({
 function ClientName({ client, activityCounts, customerKinds }) {
   if (!client) return null;
   const count = activityCounts.get(String(client.code)) || 0;
-  const doctor = isDoctorClient(client, customerKinds?.get(String(client.code)));
   return (
     <span className="client-name-with-activity">
       <span>{client.name}</span>
-      {doctor && count > 0 && (
+      {count > 0 && (
         <span
           className="client-activity-indicator"
           role="img"
