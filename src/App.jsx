@@ -1382,9 +1382,9 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds , sele
       })));
     });
   },[data,view]);
-  const quarterRows = useMemo(()=>view===`months`&&quarter
+  const quarterRows = useMemo(()=>quarter
     ? reportSourceRows.filter(row=>/^0[1-9]$|^1[0-2]$/.test(row.month)&&`Q${Math.ceil(Number(row.month)/3)}`===quarter)
-    : reportSourceRows,[reportSourceRows,view,quarter]);
+    : reportSourceRows,[reportSourceRows,quarter]);
   const reportOptions = useMemo(() =>
     Object.fromEntries(reportKeys.map(key => [
       key, selectedOptions(facetOptions(quarterRows,filters,reportKeys,key), filters[key]),
@@ -1471,12 +1471,12 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds , sele
         ))}
       </div>
       <div className="report-filters">
-        {view===`months`&&<Field label="Quarter">
+        <Field label="Quarter">
           <select aria-label="Quarter" value={quarter} onChange={e=>{setQuarter(e.target.value);setFilters(f=>({...f,month:``}));}}>
             <option value="">الكل</option>
             {[`Q1`,`Q2`,`Q3`,`Q4`].map(q=><option key={q} value={q}>{q}</option>)}
           </select>
-        </Field>}
+        </Field>
         {filterFields.map(([key, label]) => (
           <Field key={key} label={label}>
             <select
