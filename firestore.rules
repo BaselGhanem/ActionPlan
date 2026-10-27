@@ -219,7 +219,7 @@ service cloud.firestore {
    let target=m.targetTeamId;
    return m.sourceTeamId != target && f.teams.keys().hasAll([m.sourceTeamId,target]) &&
     old.get('deleted',false) != true && old.visitingTeams.hasAny([m.sourceTeamId]) && !old.visitingTeams.hasAny([target]) &&
-    m.classification in ['A','B','C'] && n.diff(old).affectedKeys().hasOnly(['visits','visitingTeams','updatedAt']) &&
+    m.classification in ['HH','HL','HM','LH','LL','LM','MH','ML','MM'] && n.diff(old).affectedKeys().hasOnly(['visits','visitingTeams','updatedAt']) &&
     n.visitingTeams == old.visitingTeams.concat([target]) &&
     n.visits.diff(old.get('visits',{})).affectedKeys().hasOnly([target]) &&
     n.visits[target] == {'classification':m.classification,'roster':f.teams[target].get('roster',null)} &&
@@ -249,7 +249,7 @@ service cloud.firestore {
    let team=m.teamId;
    return m.code == code && team is string && f.teams.keys().hasAny([team]) &&
     m.rawCode is string && m.rawCode.size() > 0 && m.rawCode.size() <= 100 && !m.rawCode.matches('.*[/].*') &&
-    m.classification in ['A','B','C'] &&
+    m.classification in ['HH','HL','HM','LH','LL','LM','MH','ML','MM'] &&
     c.keys().hasOnly(['code','name','kind','specialty','area','deleted','visitingTeams','visits','createdAt','createdBy','updatedAt']) &&
     c.keys().hasAll(['code','name','kind','specialty','area','deleted','visitingTeams','visits','createdAt','createdBy','updatedAt']) &&
     c.code == m.rawCode && c.name is string && c.name.size() > 0 && c.name.size() <= 200 &&

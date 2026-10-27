@@ -1,4 +1,5 @@
 import {fail} from './domain.js';
+import {CUSTOMER_CLASSIFICATIONS} from './customer-classifications.js';
 
 export function prepareManualCustomer(input,finance){
  const code=String(input?.code??``).trim();
@@ -12,7 +13,7 @@ export function prepareManualCustomer(input,finance){
  fail(name.length>0&&name.length<=200,`اسم العميل إلزامي ويجب ألا يتجاوز 200 حرف`);
  fail([kind,specialty,area].every(value=>value.length<=200),`بيانات العميل تتجاوز الحد المسموح (200 حرف)`);
  fail(finance?.teams?.[teamId],`اختر فريقا صحيحا`);
- fail([`A`,`B`,`C`].includes(classification),`اختر تصنيف العميل A أو B أو C`);
+ fail(CUSTOMER_CLASSIFICATIONS.includes(classification),`اختر تصنيفا معتمدا للعميل`);
  fail(!(finance.pausedTeams||[]).length&&!Object.keys(finance.uploads||{}).length,`أكمل رفع قوائم العملاء قبل إضافة عميل جديد`);
  return {code,name,kind,specialty,area,teamId,classification};
 }

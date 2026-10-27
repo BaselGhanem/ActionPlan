@@ -48,7 +48,7 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 - Standalone Matching/Unique and cross-team selection reads are authorized for admin AND marketing manager (role manager). Marketing manager has read-only access, no quota initialization or doctor selection writes. Firestore rules must be published for manager reads.
 
-- Settings has an admin-only Copy customer between teams tab. Adds target membership to the shared customer code, keeps source and other visits unchanged, requires target A/B/C classification, rejects existing membership and any active import, increments rosterEpoch and writes an immutable audit atomically. Does not copy Standalone/Pedia selections or financial activity. Requires updated Firestore rules publication.
+- Settings has an admin-only Copy customer between teams tab. Adds target membership to the shared customer code, keeps source and other visits unchanged, requires target HH/HL/HM/LH/LL/LM/MH/ML/MM classification, rejects existing membership and any active import, increments rosterEpoch and writes an immutable audit atomically. Does not copy Standalone/Pedia selections or financial activity. Requires updated Firestore rules publication.
 
 - Standalone lists keep alphabetical name/code order regardless of selection. Selection applies the committed quota count and choice locally without reload/unmount, preserving filters and scroll. Add from another specialty switches to own-roster doctors with truly blank/missing/null/whitespace specialty only (ENT-Chest/URO); counts toward the same quota and chosen blank-specialty doctors remain visible in the main list. Pedia eligibility unchanged.
 
@@ -56,4 +56,6 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 - Reports > By month has a Quarter dropdown: All, Q1–Q4. Quarter filters dated source rows before cascading filters and aggregation, clears month on quarter change, excludes unscheduled rows when a quarter is selected, and does not affect other report tabs. Comprehensive Excel export remains comprehensive.
 
-- Admin-only Settings > Add customer manually: create a globally unique code for one team with A/B/C classification and optional specialty/area. Block duplicates and active imports; preserve leading zeros, increment rosterEpoch, and write a matching immutable audit in the same transaction. Existing codes use Copy customer between teams instead. Firestore rules must be deployed separately before production use.
+- Admin-only Settings > Add customer manually: create a globally unique code for one team with HH/HL/HM/LH/LL/LM/MH/ML/MM classification and optional specialty/area. Block duplicates and active imports; preserve leading zeros, increment rosterEpoch, and write a matching immutable audit in the same transaction. Existing codes use Copy customer between teams instead. Firestore rules must be deployed separately before production use.
+
+- Approved classifications for manual add and cross-team copy: HH, HL, HM, LH, LL, LM, MH, ML, MM. Require explicit selection; maintain existing customer records and imported history unchanged. Keep UI, domain checks, tests, and Firestore rules aligned.
