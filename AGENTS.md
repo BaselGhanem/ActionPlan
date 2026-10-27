@@ -55,3 +55,5 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Updated Standalone add-from-another-specialty view displays ALL own-team customers, all specialties and kinds. Main list retains campaign specialty filtering plus selected extras. ENT-Chest/URO selection eligibility now permits all own roster customers; quota, team isolation, and Pedia specialist-doctor restriction remain enforced. Supersedes blank-only behavior.
 
 - Reports > By month has a Quarter dropdown: All, Q1–Q4. Quarter filters dated source rows before cascading filters and aggregation, clears month on quarter change, excludes unscheduled rows when a quarter is selected, and does not affect other report tabs. Comprehensive Excel export remains comprehensive.
+
+- Admin-only Settings > Add customer manually: create a globally unique code for one team with A/B/C classification and optional specialty/area. Block duplicates and active imports; preserve leading zeros, increment rosterEpoch, and write a matching immutable audit in the same transaction. Existing codes use Copy customer between teams instead. Firestore rules must be deployed separately before production use.

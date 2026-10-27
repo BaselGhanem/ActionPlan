@@ -45,6 +45,7 @@ import {withHonorariumParticipants} from "./data/cost-items";
 import { TeamActivityDialog } from "./components/TeamActivityDialog";
 import { ActualTracking } from "./components/ActualTracking";
 import { CopyCustomer } from "./components/CopyCustomer";
+import { AddCustomer } from "./components/AddCustomer";
 import { Standalone } from "./components/Standalone";
 import {selectionLabelsByCustomer} from "./data/standalone.js";
 import { IncomingExpenses } from "./components/IncomingExpenses";
@@ -1636,6 +1637,7 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo, activityCount
           ...(admin
             ? [
                 [`upload`, `رفع العملاء`],
+                [`addCustomer`, `إضافة عميل`],
                 [`copyCustomer`, `نسخ عميل بين الفرق`],
                 [`users`, `المستخدمون`],
                 [`visibility`, `رؤية الفرق`],
@@ -1652,6 +1654,7 @@ function Admin({ data, perform, notify, reload, showAudit, isDemo, activityCount
           </button>
         ))}
       </div>
+      {tab === `addCustomer` && admin && <AddCustomer data={data} busy={busy} onAdd={async payload=>{setBusy(true);try{if(isDemo)throw new Error(`إضافة العملاء متاحة بعد تسجيل الدخول الفعلي فقط`);await perform(`createCustomer`,payload,`تمت إضافة العميل بنجاح`);return true;}catch(e){notify(e.message);return false;}finally{setBusy(false);}}}/>}
       {tab === `copyCustomer` && admin && <CopyCustomer data={data} busy={busy} onCopy={payload=>run(async()=>{if(isDemo){notify(`نسخ العملاء متاح بعد تسجيل الدخول الفعلي فقط`);return;}await perform(`copyCustomer`,payload,`تم نسخ العميل الى الفريق الهدف`);})}/>}
       {tab === `visibility` && admin && (
         <section className="surface team-visibility-panel">
