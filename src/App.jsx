@@ -1434,6 +1434,13 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds , sele
     g.count.add(r.activity.id);
     groups.set(key, g);
   });
+  const displayGroups = view === `months`
+    ? [...groups.values()].sort((a,b)=>{
+        if(a.key===`غير مجدول`)return 1;
+        if(b.key===`غير مجدول`)return -1;
+        return String(a.key).localeCompare(String(b.key),`en`,{numeric:true});
+      })
+    : [...groups.values()];
   return (
     <>
       <div className="section-heading">
@@ -1510,7 +1517,7 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds , sele
               </tr>
             </thead>
             <tbody>
-              {[...groups.values()].map((g) => (
+              {displayGroups.map((g) => (
                 <tr key={g.key}>
                   <td>
                     <b>{view === `customers` ? (
