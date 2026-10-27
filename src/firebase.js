@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import {getAuth,initializeAuth,inMemoryPersistence,createUserWithEmailAndPassword,deleteUser,signOut,connectAuthEmulator} from 'firebase/auth';
 import {getFirestore,doc,getDoc,getDocFromServer,getDocs,collection,query,where,orderBy,limit,runTransaction,writeBatch,setDoc,serverTimestamp,connectFirestoreEmulator} from 'firebase/firestore';
+import {copyCustomerMembership} from './data/copy-customer.js';
 import {fail,validateActivity} from './data/domain.js';
 import {prepareProofs} from './data/proofs.js';
 import {readRosterCache,writeRosterCache,rosterCacheKey} from './data/customer-cache.js';
@@ -123,6 +124,24 @@ async function provision(payload,replaceId=null){const p=await profile();admin(p
  }catch(e){if(created)try{await deleteUser(created)}catch{}throw e;}finally{await signOut(secondaryAuth);}}
 async function updateUser(payload){if(payload.password)return provision(payload,payload.id);const p=await profile();admin(p);fail(payload.id!==uid(),`لا يمكنك تعطيل حسابك`);await runTransaction(db,async tx=>{const ur=doc(db,`users/${payload.id}`),[u,f]=await Promise.all([tx.get(ur),tx.get(financeRef)]);fail(u.exists(),`الحساب غير موجود`);const old=u.data();if(payload.active&&old.role===`team`)fail(f.data().teams[old.teamId]?.accountId===old.accountId,`يوجد حساب آخر لهذا الفريق`);tx.update(ur,{active:Boolean(payload.active)});tx.set(doc(db,`accounts/${old.accountId}`),{uid:payload.id,active:Boolean(payload.active),username:old.username,role:old.role,teamId:old.teamId});event(tx,`updateUser`,{uid:payload.id,active:old.active},{uid:payload.id,active:Boolean(payload.active)});});}
 
+async function copyCustomerToTeam(payload){
+ const p=await profile();admin(p);
+ const code=String(payload.code||``).trim();
+ fail(code&&code.length<=100&&!code.includes(`/`),`كود العميل غير صالح`);
+ const customerRef=doc(db,`customers/${encodeURIComponent(code)}`),auditId=id();
+ await runTransaction(db,async tx=>{
+  const [fs,cs]=await Promise.all([tx.get(financeRef),tx.get(customerRef)]);
+  const finance=fs.data(),customer=cs.data();
+  fail(fs.exists()&&cs.exists(),`العميل او بيانات الفرق غير موجودة`);
+  const membership=copyCustomerMembership(customer,finance,payload);
+  const {sourceTeamId,targetTeamId,classification}=payload;
+  tx.update(customerRef,{...membership,updatedAt:serverTimestamp()});
+  tx.update(financeRef,{rosterEpoch:(finance.rosterEpoch||0)+1,mutation:{kind:`copyCustomer`,uid:uid(),at:serverTimestamp(),code:encodeURIComponent(code),sourceTeamId,targetTeamId,classification,auditId}});
+  event(tx,`copyCustomer`,{code,sourceTeamId},{code,sourceTeamId,targetTeamId,classification},auditId);
+ });
+ return {code};
+}
+
 async function archiveCustomers(payload){
  const p=await profile();admin(p);
  const rows=payload?.rows;
@@ -205,7 +224,7 @@ async function chooseStandAlone({campaign,teamId,code,selected}){
  });
  return {selected};
 }
-export async function request(op,payload={}){if(op===`load`)return load();if(op===`standaloneInit`)return initializeStandAlone();if(op===`saveTeamVisibility`)return saveTeamVisibility(payload);if(op===`standaloneChoose`)return chooseStandAlone(payload);if(op===`archiveCustomers`)return archiveCustomers(payload);if(op===`saveActivity`)return saveActivity(payload);if(op===`deleteActivity`)return saveActivity(payload,true);if(op===`saveTeam`)return saveTeam(payload);if(op===`createUser`)return provision(payload);if(op===`updateUser`)return updateUser(payload);
+export async function request(op,payload={}){if(op===`load`)return load();if(op===`standaloneInit`)return initializeStandAlone();if(op===`saveTeamVisibility`)return saveTeamVisibility(payload);if(op===`standaloneChoose`)return chooseStandAlone(payload);if(op===`copyCustomer`)return copyCustomerToTeam(payload);if(op===`archiveCustomers`)return archiveCustomers(payload);if(op===`saveActivity`)return saveActivity(payload);if(op===`deleteActivity`)return saveActivity(payload,true);if(op===`saveTeam`)return saveTeam(payload);if(op===`createUser`)return provision(payload);if(op===`updateUser`)return updateUser(payload);
  const p=await profile();
  if(op===`saveTypes`){manager(p);const types=[...new Set(payload.types.map(t=>clean(t)).filter(Boolean))];fail(types.length>0&&types.length<=200,`أدخل من نوع إلى 200 نوع`);await runTransaction(db,async tx=>{const f=await tx.get(financeRef);tx.update(financeRef,{types,mutation:{kind:`saveTypes`,uid:uid(),at:serverTimestamp()}});event(tx,`saveTypes`,{types:f.data().types},{types});});return {};}
  if(op===`audit`){manager(p);const s=await getDocs(query(collection(db,`audit`),orderBy(`at`,`desc`),limit(100)));return {rows:list(s).map(r=>({...r,action:r.kind,at:r.at?{_seconds:r.at.seconds}:null}))};}

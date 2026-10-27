@@ -47,3 +47,5 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Standalone selected doctors use campaign-scoped Matching (teal, other team name) / Unique (soft violet) badges and segmented filters with counts. Unselected doctors are never Unique. Cross-team classification requires a complete admin/marketing-manager snapshot; team accounts must show unavailable rather than infer Unique from own-team reads. Pedia remains separate.
 
 - Standalone Matching/Unique and cross-team selection reads are authorized for admin AND marketing manager (role manager). Marketing manager has read-only access, no quota initialization or doctor selection writes. Firestore rules must be published for manager reads.
+
+- Settings has an admin-only Copy customer between teams tab. Adds target membership to the shared customer code, keeps source and other visits unchanged, requires target A/B/C classification, rejects existing membership and any active import, increments rosterEpoch and writes an immutable audit atomically. Does not copy Standalone/Pedia selections or financial activity. Requires updated Firestore rules publication.

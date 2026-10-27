@@ -223,3 +223,30 @@ test("restricted origin team may still fund another team sharing the same doctor
  assert.equal(written.totals.t1,10000);
  assert.equal((await getDoc(doc(db("u2"),"activities/shared-restricted"))).data().totals.t1,10000);
 });
+
+test(`admin copies one membership atomically, preserves metadata, and rejects unauthorized or duplicate copies`,async()=>{
+ await env.withSecurityRulesDisabled(async ctx=>{
+  await updateDoc(doc(ctx.firestore(),`customers/C0`),{visitingTeams:[`t0`],visits:{t0:{roster:`r0`,classification:`A`}}});
+ });
+ const copy=async(identity,extra={},includeAudit=true)=>{
+  const d=db(identity),fref=doc(d,`finance/2027`),cref=doc(d,`customers/C0`);
+  return runTransaction(d,async tx=>{
+   const [fs,cs]=await Promise.all([tx.get(fref),tx.get(cref)]),f=fs.data(),c=cs.data();
+   const auditId=`copy-${identity}`,m={kind:`copyCustomer`,uid:identity,at:serverTimestamp(),code:`C0`,sourceTeamId:`t0`,targetTeamId:`t1`,classification:`B`,auditId};
+   tx.update(cref,{visitingTeams:[...c.visitingTeams,`t1`],visits:{...c.visits,t1:{classification:`B`,roster:`r1`}},updatedAt:serverTimestamp(),...extra});
+   tx.update(fref,{rosterEpoch:(f.rosterEpoch||0)+1,mutation:m});
+   if(includeAudit)tx.set(doc(d,`audit/${auditId}`),{kind:`copyCustomer`,uid:identity,at:serverTimestamp(),before:{code:`C0`,sourceTeamId:`t0`},after:{code:`C0`,sourceTeamId:`t0`,targetTeamId:`t1`,classification:`B`}});
+  });
+ };
+ await assertFails(copy(`u1`));
+ await assertFails(copy(`manager`));
+ await assertFails(copy(`admin`,{name:`altered`}));
+ await assertFails(copy(`admin`,{},false));
+ await assertSucceeds(copy(`admin`));
+ const result=(await getDoc(doc(db(`admin`),`customers/C0`))).data();
+ assert.deepEqual(result.visitingTeams,[`t0`,`t1`]);
+ assert.equal(result.name,`طبيب 0`);
+ assert.deepEqual(result.visits.t0,{roster:`r0`,classification:`A`});
+ assert.deepEqual(result.visits.t1,{roster:`r1`,classification:`B`});
+ await assertFails(copy(`admin`));
+});

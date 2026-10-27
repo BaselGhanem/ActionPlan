@@ -215,6 +215,36 @@ service cloud.firestore {
    return admin() && m.kind in ['startImport','importChunk','finishImport'] && m.uid == request.auth.uid && m.at == request.time && n.rosterEpoch == old.get('rosterEpoch',0)+1 &&
     n.diff(old).affectedKeys().hasOnly(['teams','mutation','rosterEpoch','pausedTeams','uploads']) && n.teams.keys().toSet() == old.teams.keys().toSet() && n.teams.diff(old.teams).affectedKeys().hasOnly([t]) && sameTeamExcept(t,['roster']);
   }
+  function copiedCustomerValid(code,m,old,n,f) {
+   let target=m.targetTeamId;
+   return m.sourceTeamId != target && f.teams.keys().hasAll([m.sourceTeamId,target]) &&
+    old.get('deleted',false) != true && old.visitingTeams.hasAny([m.sourceTeamId]) && !old.visitingTeams.hasAny([target]) &&
+    m.classification in ['A','B','C'] && n.diff(old).affectedKeys().hasOnly(['visits','visitingTeams','updatedAt']) &&
+    n.visitingTeams == old.visitingTeams.concat([target]) &&
+    n.visits.diff(old.get('visits',{})).affectedKeys().hasOnly([target]) &&
+    n.visits[target] == {'classification':m.classification,'roster':f.teams[target].get('roster',null)} &&
+    n.updatedAt == request.time;
+  }
+  function copyFinance(){
+   let n=request.resource.data;
+   let old=resource.data;
+   let m=n.mutation;
+   let path=/databases/$(database)/documents/customers/$(m.code);
+   let audit=getAfter(/databases/$(database)/documents/audit/$(m.auditId)).data;
+   return admin() && m.kind == 'copyCustomer' && m.uid == request.auth.uid && m.at == request.time &&
+    n.diff(old).affectedKeys().hasOnly(['rosterEpoch','mutation']) && n.rosterEpoch == old.get('rosterEpoch',0)+1 &&
+    old.get('pausedTeams',[]).size() == 0 && old.get('uploads',{}).size() == 0 &&
+    copiedCustomerValid(m.code,m,get(path).data,getAfter(path).data,old) &&
+    audit.kind == 'copyCustomer' && audit.uid == request.auth.uid && audit.at == request.time &&
+    audit.after == {'code':get(path).data.code,'sourceTeamId':m.sourceTeamId,'targetTeamId':m.targetTeamId,'classification':m.classification};
+  }
+  function copyCustomer(code){
+   let f=fAfter();
+   let m=f.mutation;
+   return admin() && m.kind == 'copyCustomer' && m.code == code && m.uid == request.auth.uid && m.at == request.time &&
+    f.rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1 &&
+    copiedCustomerValid(code,m,resource.data,request.resource.data,f);
+  }
   function archiveFinance(){
    let n=request.resource.data;
    let old=resource.data;
@@ -270,7 +300,7 @@ service cloud.firestore {
   match /finance/2027 {
    allow read: if active();
    allow create: if admin() && request.resource.data.keys().hasOnly(['teams','types','mutation','pausedTeams','rosterEpoch','uploads']) && request.resource.data.teams == {} && request.resource.data.types is list && request.resource.data.mutation == null;
-   allow update: if (request.resource.data.mutation.kind in ['saveActivity','deleteActivity'] && activityFinance()) || metadataFinance() || importFinance() || archiveFinance();
+   allow update: if (request.resource.data.mutation.kind in ['saveActivity','deleteActivity'] && activityFinance()) || metadataFinance() || importFinance() || archiveFinance() || copyFinance();
   }
   match /activities/{activityId} {
    // Empty IDs can be checked during creation. Existing data stays protected.
@@ -288,7 +318,7 @@ service cloud.firestore {
      fAfter().rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1;
     allow update: if (admin() && fAfter().mutation.kind == 'importChunk' &&
      fAfter().rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1)
-     || archiveCustomer(code);
+     || archiveCustomer(code) || copyCustomer(code);
     allow delete: if false;
    }
 
