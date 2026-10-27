@@ -25,3 +25,13 @@ await Promise.all([
 await copyFile(new URL(`../setup.html`, import.meta.url), new URL(`setup.html`, clientDir));
 await copyFile(new URL(`../firestore.rules`, import.meta.url), new URL(`firestore.rules.txt`, clientDir));
 console.log(`Embedded ${cssFile} into index.html and admin.html (${css.length} CSS characters)`);
+
+// Keep the historic lazy-loaded ExcelJS URL usable for browsers holding a cached
+// previous app bundle. New builds use a stable URL for the workbook library.
+const exceljsStable = new URL(`assets/exceljs.min.js`, clientDir);
+const exceljsHistoric = new URL(`assets/exceljs.min-32YU9mBY.js`, clientDir);
+const { stat } = await import("node:fs/promises");
+if (!(await stat(exceljsStable).catch(() => null))) {
+  throw new Error("Stable ExcelJS asset missing from build. Check Rollup chunk naming.");
+}
+await copyFile(exceljsStable, exceljsHistoric);

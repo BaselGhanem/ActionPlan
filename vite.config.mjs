@@ -5,6 +5,11 @@ export default defineConfig({
   base: process.env.GITHUB_PAGES === `true` ? `/ActionPlan/` : `/`,
   build: {
     outDir: "dist/client",
+    rollupOptions: {
+      output: {
+        chunkFileNames: (chunk) => /exceljs/i.test(chunk.name) ? "assets/exceljs.min.js" : "assets/[name]-[hash].js",
+      },
+    },
   },
   optimizeDeps: {
     include: ["react", "react-dom/client"],
