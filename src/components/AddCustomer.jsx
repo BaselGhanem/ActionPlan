@@ -1,5 +1,5 @@
-import React,{useState} from `react`;
-import {UserPlus,CheckCircle,WarningCircle} from `@phosphor-icons/react`;
+import React,{useState} from 'react';
+import {UserPlus,CheckCircle,WarningCircle} from '@phosphor-icons/react';
 
 const initial={code:``,name:``,teamId:``,classification:`A`,kind:`طبيب`,specialty:``,area:``};
 export function AddCustomer({data,busy,onAdd}){
