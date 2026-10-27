@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import {getAuth,initializeAuth,inMemoryPersistence,createUserWithEmailAndPassword,deleteUser,signOut,connectAuthEmulator} from 'firebase/auth';
-import {getFirestore,doc,getDoc,getDocFromServer,getDocs,collection,query,where,orderBy,limit,runTransaction,writeBatch,setDoc,serverTimestamp,connectFirestoreEmulator} from 'firebase/firestore';
+import {getFirestore,doc,getDoc,getDocFromServer,getDocs,collection,query,where,orderBy,limit,runTransaction,writeBatch,setDoc,updateDoc,serverTimestamp,connectFirestoreEmulator} from 'firebase/firestore';
 import {copyCustomerMembership} from './data/copy-customer.js';
 import {prepareManualCustomer} from './data/add-customer.js';
 import {fail,validateActivity} from './data/domain.js';
@@ -45,7 +45,9 @@ const manager=p=>fail([`admin`,`manager`].includes(p.role),`هذه العملي�
 const admin=p=>fail(p.role===`admin`,`هذه العملية للمسؤول فقط`);
 const event=(tx,kind,before,after,key=id())=>{tx.set(doc(db,`audit/${key}`),{kind,uid:uid(),before:before||null,after:after||null,at:serverTimestamp()});};
 export async function resolveLogin(username){const name=username.trim().toLowerCase();fail(/^[a-z0-9._-]{3,40}$/.test(name),`اسم المستخدم غير صحيح`);const d=await getDoc(doc(db,`logins/${name}`));return d.exists()?d.data().email:`${name}@users.dadactionplan.app`;}
-async function load(){const p=await profile();let f=await getDoc(financeRef);if(!f.exists()&&p.role===`admin`){await runTransaction(db,async tx=>{const s=await tx.get(financeRef);if(!s.exists())tx.set(financeRef,{teams:{},types:[`ندوة علمية`,`مؤتمر طبي`,`اجتماع علمي`,`ورشة عمل`],mutation:null,rosterEpoch:0,pausedTeams:[],uploads:{}});});f=await getDoc(financeRef);}
+export async function passwordGate(){const p=await profile();return {mustChangePassword:p.role===`manager`&&p.mustChangePassword!==false};}
+export async function finishManagerPasswordChange(){const p=await profile();fail(p.role===`manager`&&p.mustChangePassword!==false,`لا يوجد تغيير مطلوب`);await updateDoc(doc(db,`users/${uid()}`),{mustChangePassword:false});}
+async function load(){const p=await profile();fail(p.role!==`manager`||p.mustChangePassword===false,`يجب تغيير كلمة المرور قبل الدخول`);let f=await getDoc(financeRef);if(!f.exists()&&p.role===`admin`){await runTransaction(db,async tx=>{const s=await tx.get(financeRef);if(!s.exists())tx.set(financeRef,{teams:{},types:[`ندوة علمية`,`مؤتمر طبي`,`اجتماع علمي`,`ورشة عمل`],mutation:null,rosterEpoch:0,pausedTeams:[],uploads:{}});});f=await getDoc(financeRef);}
  fail(f.exists(),`يجب أن يدخل Admin أولا لتهيئة ميزانيات 2027`);
  const financial=f.data();
  const ownVisibility=p.role==="team"?await getDoc(doc(db,`teamVisibility/${p.teamId}`)):null;
@@ -119,7 +121,7 @@ async function provision(payload,replaceId=null){const p=await profile();admin(p
  await runTransaction(db,async tx=>{const [f,l]=await Promise.all([tx.get(financeRef),tx.get(doc(db,`logins/${username}`))]);const finance=f.data();fail(replaceId||!l.exists(),`اسم المستخدم مستخدم سابقا`);if(replaceId)fail(!l.exists()||l.data().uid===replaceId,`تم تغيير الحساب من جلسة أخرى، حدث الصفحة`);
  const accountId=previous?.accountId||replaceId||created.uid;
  if(role===`team`){const t=finance.teams[teamId];fail(t,`اختر الفريق`);if(t.accountId&&t.accountId!==accountId){const matches=await tx.get(doc(db,`accounts/${t.accountId}`));fail(!matches.exists()||!matches.data().active,`يوجد حساب مفعل لهذا الفريق`);}tx.update(financeRef,{teams:{...finance.teams,[teamId]:{...t,accountId}},mutation:{kind:`account`,teamId,uid:uid(),at:serverTimestamp()}});}
- const user={username,name:previous?.name||clean(payload.name)||username,role,teamId:role===`team`?teamId:null,accountId,active:payload.active??previous?.active??true,current:true};
+ const user={username,name:previous?.name||clean(payload.name)||username,role,teamId:role===`team`?teamId:null,accountId,active:payload.active??previous?.active??true,current:true,...(role===`manager`?{mustChangePassword:true}:{})};
  if(replaceId)tx.update(doc(db,`users/${replaceId}`),{active:false,current:false});
  tx.set(doc(db,`users/${created.uid}`),user);tx.set(doc(db,`logins/${username}`),{uid:created.uid,email,accountId});tx.set(doc(db,`accounts/${accountId}`),{uid:created.uid,active:user.active,username,role,teamId:user.teamId});event(tx,replaceId?`resetPassword`:`createUser`,replaceId?{uid:replaceId}:null,{uid:created.uid,username,role});});
  }catch(e){if(created)try{await deleteUser(created)}catch{}throw e;}finally{await signOut(secondaryAuth);}}

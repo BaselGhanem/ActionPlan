@@ -32,12 +32,13 @@ import {
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  updatePassword,
   signOut,
   browserLocalPersistence,
   browserSessionPersistence,
   setPersistence,
 } from "firebase/auth";
-import { auth, request, resolveLogin } from "./firebase";
+import { auth, request, resolveLogin, passwordGate, finishManagerPasswordChange } from "./firebase";
 import { EMPTY_SPECIALTY, directoryKeys, reportKeys, matchingRows, facetOptions, selectedOptions } from "./data/cascading-filters";
 import { activityCountsByCustomer, isDoctorClient, hasCustomerActivity } from "./data/activity-presence";
 import { groupBySpecialty } from "./data/specialty-report";
@@ -284,10 +285,41 @@ function Login({ onError, loading }) {
     </main>
   );
 }
+function ChangeManagerPassword({onComplete,onError}){
+ const [password,setPassword]=useState(``),[confirm,setConfirm]=useState(``),[busy,setBusy]=useState(false);
+ async function submit(e){
+  e.preventDefault();
+  if(password.length<8){onError(`كلمة المرور يجب ألا تقل عن 8 أحرف`);return;}
+  if(password!==confirm){onError(`كلمتا المرور غير متطابقتين`);return;}
+  setBusy(true);
+  try{
+   await updatePassword(auth.currentUser,password);
+   await finishManagerPasswordChange();
+   setPassword(``);setConfirm(``);
+   await onComplete();
+  }catch(error){
+   onError(error.code===`auth/requires-recent-login`?`أعد تسجيل الدخول بكلمة مرورك الحالية ثم غيّرها`:`تعذر إتمام العملية: ${error.message}`);
+  }finally{setBusy(false);}
+ }
+ return <main className="password-first-screen" dir="rtl">
+  <form className="password-first-card" onSubmit={submit}>
+   <span className="eyebrow">Dar Al Dawa · 2027</span>
+   <div className="password-first-icon"><LockKey size={28}/></div>
+   <h2>تغيير كلمة المرور مطلوب</h2>
+   <p>لحماية حساب مدير التسويق، يجب اختيار كلمة مرور جديدة قبل استخدام الموقع. يطلب التغيير مرة واحدة لهذا الحساب.</p>
+   <Field label="كلمة المرور الجديدة"><input type="password" autoComplete="new-password" dir="ltr" minLength={8} required value={password} onChange={e=>setPassword(e.target.value)}/></Field>
+   <Field label="تأكيد كلمة المرور"><input type="password" autoComplete="new-password" dir="ltr" minLength={8} required value={confirm} onChange={e=>setConfirm(e.target.value)}/></Field>
+   <button className="primary" type="submit" disabled={busy||password.length<8||confirm.length<8||password!==confirm}><LockKey size={17}/>{busy?`جار الحفظ…`:`حفظ كلمة المرور والدخول`}</button>
+   <button className="password-first-signout" type="button" disabled={busy} onClick={()=>signOut(auth)}>تسجيل الخروج</button>
+  </form>
+ </main>;
+}
+
 export function App() {
   const [data, setData] = useState(isDemo ? demoData() : null),
     [user, setUser] = useState(isDemo ? { uid: `demo` } : null),
     [ready, setReady] = useState(isDemo),
+    [gate, setGate] = useState(isDemo?`ok`:`checking`),
     [loading, setLoading] = useState(false),
     [loadError, setLoadError] = useState(``),
     [busy, setBusy] = useState(false),
@@ -327,6 +359,9 @@ export function App() {
     setLoading(true);
     setLoadError(``);
     try {
+      const status=await passwordGate();
+      if(status.mustChangePassword){setGate(`required`);setData(null);return;}
+      setGate(`ok`);
       const d = await request(`load`);
       setData(d);
     } catch (e) {
@@ -343,8 +378,8 @@ export function App() {
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
       setReady(true);
-      if (u) reload();
-      else setData(null);
+      if (u){setGate(`checking`);reload();}
+      else{setData(null);setGate(`checking`);}
     });
   }, []);
   useEffect(() => {
@@ -599,6 +634,8 @@ export function App() {
         {toast && <Toast toast={toast} close={() => setToast(null)} />}
       </>
     );
+  if (gate===`required`)
+    return <><ChangeManagerPassword onError={notify} onComplete={reload}/>{toast&&<Toast toast={toast} close={()=>setToast(null)}/>}</>;
   if (!data)
     return (
       <main className="loading-screen">

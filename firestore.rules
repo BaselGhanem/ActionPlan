@@ -3,7 +3,7 @@ service cloud.firestore {
  match /databases/{database}/documents {
   function signed() { return request.auth != null; }
   function user() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
-  function active() { return signed() && user().active == true; }
+  function active() { return signed() && user().active == true && (user().role != 'manager' || user().get('mustChangePassword',true) == false); }
   function admin() { return active() && user().role == 'admin'; }
   function manager() { return active() && user().role in ['admin','manager']; }
   function principal() { return user().get('accountId', request.auth.uid); }
@@ -480,7 +480,8 @@ service cloud.firestore {
    allow get: if (signed() && request.auth.uid == id) || admin();
    allow list: if admin();
    allow create: if bootstrap(id);
-   allow create,update: if admin() && request.resource.data.keys().hasOnly(['username','name','role','teamId','accountId','active','current']) && request.resource.data.role in ['admin','manager','team'] && request.resource.data.active is bool && request.resource.data.accountId is string &&
+   allow update: if signed() && id == request.auth.uid && resource.data.role == 'manager' && resource.data.active == true && resource.data.get('mustChangePassword',true) != false && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword']) && request.resource.data.mustChangePassword == false;
+   allow create,update: if admin() && request.resource.data.keys().hasOnly(['username','name','role','teamId','accountId','active','current','mustChangePassword']) && request.resource.data.role in ['admin','manager','team'] && (request.resource.data.role != 'manager' || (resource == null ? request.resource.data.mustChangePassword == true : request.resource.data.get('mustChangePassword',true) == resource.data.get('mustChangePassword',true))) && request.resource.data.active is bool && request.resource.data.accountId is string &&
     (id != request.auth.uid || request.resource.data.active) &&
     (!request.resource.data.active || request.resource.data.role != 'team' || fAfter().teams[request.resource.data.teamId].accountId == request.resource.data.accountId);
   }
