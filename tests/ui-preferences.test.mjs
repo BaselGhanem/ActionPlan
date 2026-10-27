@@ -15,3 +15,13 @@ test("dynamic report counters translate while business records remain unchanged"
  assert.equal(translateValue("د. أحمد المصري"),"د. أحمد المصري");
  assert.equal(translateValue("Azord"),"Azord");
 });
+
+test("English labels cover the screenshot: incoming expenses, counters and customer forms",()=>{
+ assert.equal(translateValue("54 نشاط"),"54 activities");
+ assert.equal(translateValue("نشاط"),"Activities");
+ assert.equal(translateValue("اختر التصنيف"),"Select Classification");
+ assert.equal(translateValue("مخطط حمّلته الفرق الأخرى"),"Planned by Other Teams");
+ assert.equal(translateValue("المؤثر على الميزانية حالياً"),"Currently Impacting Budget");
+ assert.equal(translateValue("غير محدد"),"Not Specified");
+ assert.equal(translateValue("الفريق المصدر:"),"Source Team:");
+});

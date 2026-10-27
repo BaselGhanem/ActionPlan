@@ -2232,3 +2232,165 @@ html[data-theme="dark"] .display-pref-button{background:transparent;color:#c7e5f
 html[data-theme="dark"] .display-pref-button:hover{background:#315069}
 html[data-theme="dark"] :is(.report-active-filterbar-title,.admin-team small,.standalone-campaign>small){color:#c4dcee}
 html[data-theme="dark"] :is(svg,img,video,canvas){filter:none}
+
+
+/* === English + Dark mode audit, 2026-10-27 ===
+   Every surface, text role and interactive state must retain contrast.
+   Scope all overrides to dark mode without changing the light appearance. */
+html[data-theme="dark"]{
+  --surface:#142638;--surface-elevated:#192f44;--surface-soft:#20384c;
+  --surface-hover:#29465b;--dark-border:#35536b;
+  --dark-text:#e9f3ff;--dark-muted:#b4c9de;
+}
+html[data-theme="dark"] :is(
+  .incoming-summary>div,.actual-stats>div,.roster-upload .roster-step,
+  .activity-client-item,.activity-team-options .check-line,
+  .activity-reconcile,.activity-reconcile.invalid,.activity-client,
+  .picker-row,.standalone-doctor,.standalone-matched-doctors>div,
+  .standalone-match-stats span,.standalone-status-filters,
+  .standalone-status-filters .status-filter.active,
+  .standalone-campaign-icon,.standalone-campaign.pedia .standalone-campaign-icon,
+  .standalone-notice,.standalone-doctor.selected,
+  .standalone-status-label.matching,.standalone-status-label.unique,
+  .roster-upload .roster-errors,.manual-customer-warning,
+  .archive-bulk-button,.incoming-disclaimer,
+  .upload-zone,.balance-note.invalid,.actual-client,
+  .status-filter b,.standalone-meter,.equal-button,
+  .client-activity-indicator,.client-selection-label
+){
+  background:var(--surface-elevated)!important;
+  border-color:var(--dark-border)!important;
+  color:var(--dark-text)!important;
+}
+html[data-theme="dark"] :is(
+  .incoming-summary>div,.actual-stats>div,.standalone-campaign,
+  .activity-form-card,.activity-share-row,.report-active-filterbar,
+  .surface,.table-wrap,.actual-entry,.actual-toolbar
+){
+  background:var(--surface)!important;
+  border-color:var(--dark-border)!important;
+}
+html[data-theme="dark"] .incoming-summary>div{
+  min-height:100px;
+  box-shadow:0 8px 22px #030c1726!important;
+}
+html[data-theme="dark"] :is(
+  .incoming-summary b,.actual-stats b,.incoming-summary strong,
+  .actual-entry-amounts b,.actual-edit-total b,
+  .standalone-quota,.standalone-campaign>b,.standalone-campaign-title>b,
+  .stat strong,.row-sub+strong
+){
+  color:#eaf5ff!important;
+}
+html[data-theme="dark"] :is(
+  .incoming-summary small,.actual-stats small,.incoming-disclaimer,
+  .incoming-empty,.actual-entry-amounts span,.actual-entry small,
+  .standalone-campaign>small,.standalone-empty,.standalone-campaign button span,
+  .standalone-doctor-details small,.standalone-matched-doctors small,
+  .report-no-active-filters,.activity-cost-item label,
+  .honorarium-disclosure-label small,.report-active-filterbar-title,
+  .table-wrap .row-sub
+){
+  color:var(--dark-muted)!important;
+}
+html[data-theme="dark"] :is(.incoming-summary b,.actual-stats b,.stat strong){
+  font-variant-numeric:tabular-nums;
+}
+html[data-theme="dark"] :is(.incoming-filter-bar .field,.standalone-toolbar,.actual-toolbar){
+  color:var(--dark-text);
+}
+html[data-theme="dark"] :is(.count,.year-pill,.report-active-filter-count){
+  color:#d8eafd!important;
+  background:#203e56!important;
+  border-color:var(--dark-border)!important;
+}
+html[data-theme="dark"] :is(.year-pill svg,.count svg){color:#aed9f8!important;}
+html[data-theme="dark"] .year-pill{background:transparent!important;}
+html[data-theme="dark"] :is(.standalone-status-filters,.standalone-status-filters .status-filter,.status-filter b){
+  background:#1b3348!important;color:#d1e7f8!important;
+  border-color:#35566e!important;
+}
+html[data-theme="dark"] :is(.standalone-status-filters .matching.active,.standalone-status-label.matching,.standalone-doctor.is-matching){
+  background:#143e41!important;color:#b1efe2!important;border-color:#3f807a!important;
+}
+html[data-theme="dark"] :is(.standalone-status-filters .unique.active,.standalone-status-label.unique,.standalone-doctor.is-unique){
+  background:#302b4f!important;color:#e2d5ff!important;border-color:#655a8f!important;
+}
+html[data-theme="dark"] :is(.badge.executed,.positive,.activity-reconcile:not(.invalid),.actual-edit-total){
+  color:#a4ebcf!important;border-color:#2f7770!important;
+}
+html[data-theme="dark"] :is(.badge.cancelled,.activity-reconcile.invalid,.warning-text,.manual-customer-warning,.roster-upload .roster-errors){
+  color:#ffb6ad!important;border-color:#7d4c56!important;
+}
+html[data-theme="dark"] :is(
+  .table-wrap table,.table-wrap tbody tr,.table-wrap tbody td,
+  .table-wrap td,.table-wrap th,.table-wrap tfoot td
+){
+  border-color:var(--dark-border)!important;
+}
+html[data-theme="dark"] .table-wrap :is(thead th,tfoot td){
+  background:#203c53!important;color:#d7e9fb!important;
+}
+html[data-theme="dark"] .table-wrap tbody tr:nth-child(even){background:#1a3044!important;}
+html[data-theme="dark"] .table-wrap tbody tr:nth-child(odd){background:#152a3c!important;}
+html[data-theme="dark"] .table-wrap tbody tr:hover{background:#25445a!important;}
+html[data-theme="dark"] .table-wrap td{color:#e1edfa!important;}
+html[data-theme="dark"] .table-wrap :is(.row-sub,.code){color:#a7c4da!important;}
+html[data-theme="dark"] .table-wrap .numeric{color:#eff8ff!important;}
+html[data-theme="dark"] :is(input,select,textarea){
+  color:var(--dark-text)!important;
+  background:#1a3247!important;
+  border:1px solid #3a5973!important;
+}
+html[data-theme="dark"] :is(input,select,textarea):focus{
+  border-color:#5badaf!important;
+  box-shadow:0 0 0 3px #44a9b427!important;
+}
+html[data-theme="dark"] :is(input,select,textarea):disabled{
+  background:#1b2838!important;color:#98a9bd!important;
+}
+html[data-theme="dark"] input[type="checkbox"]:checked{
+  background:var(--orange)!important;border-color:var(--orange)!important;
+}
+html[data-theme="dark"] :is(.report-active-filter-chip,.report-active-filter-chip button,.report-clear-all){
+  background:#1c4247!important;color:#bcf4e7!important;border-color:#417a75!important;
+}
+html[data-theme="dark"] :is(.report-active-filter-chip:hover,.report-active-filter-chip button:hover,.report-clear-all:hover){
+  background:#27595a!important;
+}
+html[data-theme="dark"] :is(.topbar,.sidebar,.modal,.activity-modal,.password-first-card){
+  box-shadow:0 6px 24px #01091433;
+}
+html[data-theme="dark"] :is(.tabs button.active,.standalone-campaign button.active,.icon-button[aria-pressed="true"]){
+  background:#254964!important;color:#d9edff!important;border-color:#4c7895!important;
+}
+html[data-theme="dark"] :is(.standalone-notice,.incoming-disclaimer,.team-visibility-caveat){
+  line-height:1.85;
+}
+html[data-lang="en"] .sidebar nav button{
+  white-space:normal;
+  min-height:49px;
+  line-height:1.4;
+  text-align:start;
+  overflow-wrap:normal;
+}
+html[data-lang="en"] .sidebar nav button span{
+  min-width:0;
+  word-break:normal;
+}
+html[data-lang="en"] :is(.incoming-summary b,.actual-stats b,.stat strong){
+  direction:ltr;text-align:start;
+}
+html[data-lang="en"] .topbar h1{overflow-wrap:anywhere;line-height:1.35;}
+html[data-lang="en"] :is(.incoming-filter-bar,.report-active-filterbar,.section-heading){
+  min-width:0;
+}
+html[data-lang="en"] :is(.incoming-filter-bar>.search,.incoming-filter-bar>.field,.report-active-filter-chips){
+  min-width:0;
+}
+html[data-lang="en"] :is(.table-wrap,.surface){max-width:100%;min-width:0;}
+@media(max-width:680px){
+  html[data-lang="en"] .sidebar nav button{font-size:12px;}
+  html[data-lang="en"] .topbar h1{max-width:30vw;}
+  html[data-theme="dark"] .incoming-summary>div{min-height:82px;}
+}
