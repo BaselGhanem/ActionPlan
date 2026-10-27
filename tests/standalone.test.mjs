@@ -9,15 +9,15 @@ test("configured quotas and team permissions",()=>{
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"M"}).map(g=>g.id),["ent-chest","uro"]);
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"A"}).map(g=>g.id),["ent-chest","pedia"]);
 });
-test("eligibility requires specialist doctor on team's roster",()=>{
+test("eligibility requires own roster and Pedia alone requires a specialist doctor",()=>{
  for(const s of ["ENT","Chest speciality","Pulmonology","انف واذن","أمراض الصدر"])assert.ok(specialtyMatches("ent-chest",s),s);
  for(const s of ["URO","Urology","المسالك البولية"])assert.ok(specialtyMatches("uro",s),s);
  const doctor={kind:"طبيب",specialty:"ENT",visitingTeams:["A","M"]};
  assert.ok(eligibleDoctor("ent-chest",doctor,"A"));
  assert.ok(eligibleDoctor("ent-chest",doctor,"M"));
  assert.equal(eligibleDoctor("ent-chest",doctor,"U"),false);
- assert.equal(eligibleDoctor("uro",doctor,"A"),false);
- assert.equal(eligibleDoctor("ent-chest",{...doctor,kind:"صيدلية"},"A"),false);
+ assert.equal(eligibleDoctor("uro",doctor,"A"),true);
+ assert.equal(eligibleDoctor("ent-chest",{...doctor,kind:"صيدلية"},"A"),true);
  for(const specialty of [`Pedia`,`Pediatrics`,`Paediatrics`,`طب الأطفال`,`اطفال`])assert.ok(specialtyMatches(`pedia`,specialty),specialty);
  assert.equal(eligibleDoctor(`pedia`,{...doctor,specialty:`Pediatric`},`A`),true);
  assert.equal(eligibleDoctor(`pedia`,doctor,`A`),false);
@@ -67,14 +67,14 @@ test(`selection classification isolates campaigns and never guesses from incompl
  assert.equal(selectionStatusByCustomer(choices.filter(c=>c.teamId!==`U`),`uro`,`M`,true).get(`007`).status,`unique`);
 });
 
-test(`standalone permits only blank additional specialties on own doctor roster; Pedia stays unchanged`,()=>{
+test(`standalone permits all own roster specialties and kinds; Pedia stays unchanged`,()=>{
  for(const specialty of [undefined,null,``,`   `]){
   const doctor={kind:`طبيب`,specialty,visitingTeams:[`A`]};
   assert.ok(eligibleDoctor(`ent-chest`,doctor,`A`));
   assert.ok(eligibleDoctor(`uro`,doctor,`A`));
   assert.equal(eligibleDoctor(`pedia`,doctor,`A`),false);
   assert.equal(eligibleDoctor(`uro`,doctor,`M`),false);
-  assert.equal(eligibleDoctor(`uro`,{...doctor,kind:`صيدلية`},`A`),false);
+  assert.equal(eligibleDoctor(`uro`,{...doctor,kind:`صيدلية`},`A`),true);
  }
- assert.equal(eligibleDoctor(`uro`,{kind:`طبيب`,specialty:`Cardiology`,visitingTeams:[`A`]},`A`),false);
+ assert.equal(eligibleDoctor(`uro`,{kind:`طبيب`,specialty:`Cardiology`,visitingTeams:[`A`]},`A`),true);
 });

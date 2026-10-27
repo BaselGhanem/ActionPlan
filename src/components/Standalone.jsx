@@ -1,10 +1,10 @@
 import React,{useMemo,useState,useRef,useLayoutEffect} from "react";
 import {Target,UsersThree,MagnifyingGlass,Check,Plus,ArrowClockwise,ShieldCheck,Link,User} from "@phosphor-icons/react";
-import {visibleStandaloneGroups,matchStandAlone,eligibleDoctor,STANDALONE_CAMPAIGNS,selectionLabelsByCustomer,selectionStatusByCustomer} from "../data/standalone.js";
+import {visibleStandaloneGroups,matchStandAlone,eligibleDoctor,STANDALONE_CAMPAIGNS,selectionLabelsByCustomer,selectionStatusByCustomer,specialtyMatches} from "../data/standalone.js";
 
 export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const listRef=useRef(null),savedScroll=useRef(null);
- const [withoutSpecialty,setWithoutSpecialty]=useState(false);
+ const [allSpecialties,setAllSpecialties]=useState(false);
  const [active,setActive]=useState("");
  const [statusFilter,setStatusFilter]=useState(`all`);
  const [search,setSearch]=useState("");
@@ -22,7 +22,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const roster=new Set(data.rosters.find(r=>r.teamId===current?.teamId)?.rows.map(c=>c.code)||[]);
  const participants=data.customers.filter(c=>
   current&&eligibleDoctor(current.id,{...c,visitingTeams:c.visitingTeams||[current.teamId]},current.teamId)&&roster.has(c.code)&&
-  (mode!==`standalone`|| (withoutSpecialty?!String(c.specialty??``).trim():Boolean(String(c.specialty??``).trim())||selectedCodes.has(c.code))));
+  (mode!==`standalone`|| (allSpecialties||specialtyMatches(current.id,c.specialty)||selectedCodes.has(c.code))));
  const statuses=useMemo(()=>selectionStatusByCustomer(choices,current?.id,current?.teamId,privileged&&data.standalone?.complete!==false),[choices,current?.id,current?.teamId,privileged,data.standalone?.complete]);
  const canClassify=privileged&&data.standalone?.complete!==false;
  const showMatching=mode===`standalone`;
@@ -44,7 +44,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
      <div className="standalone-campaign-title"><span className="standalone-campaign-icon"><Target size={17} weight="bold"/></span><b>{c.title}</b></div>
      <small>{c.id===`ent-chest`?`Azord + Matador • 35 لكل فريق`:c.id===`uro`?`URO + Matador • 25 لكل فريق`:`Azord + Clavodar + Mixif • بدون حصة محددة`}</small>
      <div>{groups.filter(g=>g.id===c.id).map(g=>
-      <button type="button" key={g.key} aria-pressed={selectedKey===g.key} className={selectedKey===g.key?"active":""} onClick={()=>{setActive(g.key);setSearch("");setOnlySelected(false);setStatusFilter(`all`);setWithoutSpecialty(false)}}>
+      <button type="button" key={g.key} aria-pressed={selectedKey===g.key} className={selectedKey===g.key?"active":""} onClick={()=>{setActive(g.key);setSearch("");setOnlySelected(false);setStatusFilter(`all`);setAllSpecialties(false)}}>
        {g.teamName}
        <span>{enabled.get(g.key)?.count||0}{g.quota>0?` / ${g.quota}`:``}</span>
       </button>)}</div>
@@ -58,8 +58,8 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
    {current.quota>0&&<div className="standalone-meter"><div style={{width:`${Math.min(100,count/current.quota*100)}%`}}/></div>}
    {!quota&&<p className="standalone-notice" role="status">يلزم تهيئة المسار بواسطة الأدمن قبل بدء اختيار الأطباء</p>}
    {mode===`standalone`&&profile.role!==`manager`&&<div className="standalone-extra-specialty">
-    <button type="button" className="text-button" aria-pressed={withoutSpecialty} disabled={busy} onClick={()=>{setWithoutSpecialty(v=>!v);setSearch(``);setOnlySelected(false);setStatusFilter(`all`);}}><Plus size={17}/>{withoutSpecialty?`العودة للقائمة الرئيسية`:`اضافة من تخصص آخر`}</button>
-    {withoutSpecialty&&<small role="status">اطباء فريقك الذين لم يحدد لهم تخصص فقط، ضمن حصة المسار الحالية</small>}
+    <button type="button" className="text-button" aria-pressed={allSpecialties} disabled={busy} onClick={()=>{setAllSpecialties(v=>!v);setSearch(``);setOnlySelected(false);setStatusFilter(`all`);}}><Plus size={17}/>{allSpecialties?`العودة للقائمة الرئيسية`:`اضافة من تخصص آخر`}</button>
+    {allSpecialties&&<small role="status">كل عملاء فريقك بجميع التخصصات، ضمن حصة المسار الحالية</small>}
    </div>}
    <div className="standalone-toolbar">
     <label className="search"><MagnifyingGlass size={17}/><input placeholder="ابحث بالاسم أو الكود أو التخصص" value={search} onChange={e=>setSearch(e.target.value)}/></label>

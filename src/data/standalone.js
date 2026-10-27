@@ -17,7 +17,7 @@ export const specialtyMatches=(campaign,specialty)=>{
  return false;
 };
 export const isDoctor=(c)=>["doctor","physician","طبيب","طبيبة","دكتور","دكتورة"].includes(String(c?.kind||"").trim().toLocaleLowerCase());
-export const eligibleDoctor=(campaign,c,teamId)=>Boolean(isDoctor(c)&&(specialtyMatches(campaign,c.specialty)||([`ent-chest`,`uro`].includes(campaign)&&!String(c.specialty??``).trim()))&&c.visitingTeams?.includes(teamId));
+export const eligibleDoctor=(campaign,c,teamId)=>Boolean(c.visitingTeams?.includes(teamId)&&([`ent-chest`,`uro`].includes(campaign)||(campaign===`pedia`&&isDoctor(c)&&specialtyMatches(campaign,c.specialty))));
 /** Campaign selections are independent from financial activities and deduplicated by customer code. */
 export function selectionLabelsByCustomer(choices=[]){
  const result=new Map();

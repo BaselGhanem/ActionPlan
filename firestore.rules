@@ -354,12 +354,10 @@ service cloud.firestore {
    let doctor=get(/databases/$(database)/documents/customers/$(encodedCode)).data;
    let spec=doctor.get('specialty','');
    return doctor.code == code && doctor.get('deleted',false) != true &&
-    doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') &&
     doctor.visitingTeams.hasAny([t]) &&
-    ((c in ['ent-chest','uro'] && (spec == null || spec.matches('^\\s*$'))) ||
-     (c == 'ent-chest' && spec.matches('(?i).*(ent|chest|pulmon|thoracic|otorhin|respiratory|اذن|أذن|انف|أنف|صدر).*')) ||
-     (c == 'uro' && spec.matches('(?i).*(uro|urolog|مسالك|بولي|بولية).*')) ||
-     (c == 'pedia' && spec.matches('(?i).*(pedia|paedia|pediatr|paediatr|أطفال|اطفال|طفل).*')));
+    (c in ['ent-chest','uro'] ||
+     (c == 'pedia' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') &&
+      spec.matches('(?i).*(pedia|paedia|pediatr|paediatr|أطفال|اطفال|طفل).*')));
   }
   function quotaAfter(c,t) {
    return getAfter(/databases/$(database)/documents/standaloneQuotas/$(c + '__' + t)).data;
