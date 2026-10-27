@@ -4,7 +4,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 concurrency:
@@ -31,6 +31,32 @@ jobs:
           GITHUB_PAGES: 'true'
       - run: npm run test:sites
       - run: cp dist/client/index.html dist/client/admin.html
+      - name: Validate compiled GitHub Pages output
+        run: |
+          test -s dist/client/index.html
+          test -s dist/client/assets/exceljs.min.js
+          grep -q '/ActionPlan/assets/index-' dist/client/index.html
+          if grep -qE '%BASE_URL%|/src/main.jsx' dist/client/index.html; then
+            echo 'ERROR: GitHub Pages entrypoint contains Vite development paths'
+            exit 1
+          fi
+      - name: Publish compiled site to branch root
+        run: |
+          cp dist/client/index.html index.html
+          cp dist/client/admin.html admin.html
+          mkdir -p assets
+          cp -a dist/client/assets/. assets/
+          cp dist/client/favicon.ico favicon.ico
+          cp dist/client/setup.html setup.html
+          cp dist/client/firestore.rules.txt firestore.rules.txt
+          touch .nojekyll
+          git add -- index.html admin.html assets favicon.ico setup.html firestore.rules.txt .nojekyll
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Publish compiled ActionPlan assets [skip ci]"
+            git push origin HEAD:main
+          fi
       - uses: actions/configure-pages@v5
         with:
           enablement: true

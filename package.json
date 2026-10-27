@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/restore-source-index.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/restore-source-index.mjs",
     "build": "vite build && node scripts/prepare-sites-build.mjs && node scripts/prepare-admin.mjs",
     "preview": "vite preview",
     "test:sites": "node --test tests/sites-worker.test.mjs",
