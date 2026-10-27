@@ -28,6 +28,9 @@ import {
   Check,
   FileXls,
   Target,
+  Globe,
+  Moon,
+  Sun,
 } from "@phosphor-icons/react";
 import {
   onAuthStateChanged,
@@ -61,6 +64,7 @@ import {
 } from "./data/domain";
 import { columns, downloadWorkbook } from "./files";
 import { downloadRosterTemplate, readRosterTemplate } from "./roster-template";
+import { observeUILanguage } from "./ui-preferences.js";
 const money = (n) =>
   new Intl.NumberFormat(`en-US`, {
     minimumFractionDigits: 2,
@@ -197,7 +201,17 @@ function Empty({ text, children }) {
     </div>
   );
 }
-function Login({ onError, loading }) {
+function DisplayPreferences({language,setLanguage,theme,setTheme}){
+ return <div className="display-preferences" role="group" aria-label="Language and appearance">
+  <button type="button" className="display-pref-button" onClick={()=>setLanguage(v=>v==="ar"?"en":"ar")} title={language==="ar"?"Switch to English":"Switch to Arabic"} aria-label={language==="ar"?"Switch to English":"Switch to Arabic"}>
+   <Globe size={18}/><span>{language==="ar"?"EN":"عربي"}</span>
+  </button>
+  <button type="button" className="display-pref-button" onClick={()=>setTheme(v=>v==="light"?"dark":"light")} title={theme==="light"?(language==="ar"?"الوضع الداكن":"Dark mode"):(language==="ar"?"الوضع الفاتح":"Light mode")} aria-label={theme==="light"?"Enable dark mode":"Enable light mode"}>
+   {theme==="light"?<Moon size={18}/>:<Sun size={18}/>}<span>{theme==="light"?(language==="ar"?"داكن":"Dark"):(language==="ar"?"فاتح":"Light")}</span>
+  </button>
+ </div>;
+}
+function Login({ onError, loading, preferences }) {
   const [username, setUsername] = useState(``),
     [password, setPassword] = useState(``),
     [remember, setRemember] = useState(false),
@@ -242,6 +256,7 @@ function Login({ onError, loading }) {
         <p>مساحة موحدة للعملاء والفرق والأنشطة الطبية لعام 2027</p>
       </section>
       <form className="login-form" onSubmit={submit}>
+        <div className="auth-preferences">{preferences}</div>
         <span className="eyebrow">دار الدواء • 2027</span>
         <h2>تسجيل الدخول</h2>
         <p>ادخل بيانات الحساب الذي أنشأه مسؤول النظام</p>
@@ -285,7 +300,7 @@ function Login({ onError, loading }) {
     </main>
   );
 }
-function ChangeManagerPassword({onComplete,onError}){
+function ChangeManagerPassword({onComplete,onError,preferences}){
  const [password,setPassword]=useState(``),[confirm,setConfirm]=useState(``),[busy,setBusy]=useState(false);
  async function submit(e){
   e.preventDefault();
@@ -303,6 +318,7 @@ function ChangeManagerPassword({onComplete,onError}){
  }
  return <main className="password-first-screen" dir="rtl">
   <form className="password-first-card" onSubmit={submit}>
+   <div className="auth-preferences">{preferences}</div>
    <span className="eyebrow">Dar Al Dawa · 2027</span>
    <div className="password-first-icon"><LockKey size={28}/></div>
    <h2>تغيير كلمة المرور مطلوب</h2>
@@ -346,6 +362,22 @@ export function App() {
     }),
     [pageNo, setPageNo] = useState(1),
     [expandedDirectory, setExpandedDirectory] = useState(false);
+  const [language,setLanguage] = useState(()=>{try{return localStorage.getItem('actionplan-language')==='en'?'en':'ar'}catch{return 'ar'}});
+  const [theme,setTheme] = useState(()=>{try{return localStorage.getItem('actionplan-theme')==='dark'?'dark':'light'}catch{return 'light'}});
+  useEffect(()=>{
+    document.documentElement.lang=language;
+    document.documentElement.dataset.lang=language;
+    document.title=language==='en'?'Dar Al Dawa | Medical Activity Plan 2027':'دار الدواء | خطة الأنشطة الطبية 2027';
+    document.documentElement.dir=language==='en'?'ltr':'rtl';
+    document.body.dir=language==='en'?'ltr':'rtl';
+    try{localStorage.setItem('actionplan-language',language)}catch{}
+    return observeUILanguage(language);
+  },[language]);
+  useEffect(()=>{
+    document.documentElement.dataset.theme=theme;
+    try{localStorage.setItem('actionplan-theme',theme)}catch{}
+  },[theme]);
+  const preferences=<DisplayPreferences language={language} setLanguage={setLanguage} theme={theme} setTheme={setTheme}/>;
   function notify(message, type = `error`) {
     setToast({ message, type });
   }
@@ -630,12 +662,12 @@ export function App() {
   if (!user)
     return (
       <>
-        <Login onError={notify} loading={loading} />
+        <Login onError={notify} loading={loading} preferences={preferences}/>
         {toast && <Toast toast={toast} close={() => setToast(null)} />}
       </>
     );
   if (gate===`required`)
-    return <><ChangeManagerPassword onError={notify} onComplete={reload}/>{toast&&<Toast toast={toast} close={()=>setToast(null)}/>}</>;
+    return <><ChangeManagerPassword onError={notify} onComplete={reload} preferences={preferences}/>{toast&&<Toast toast={toast} close={()=>setToast(null)}/>}</>;
   if (!data)
     return (
       <main className="loading-screen">
@@ -712,6 +744,7 @@ export function App() {
             </div>
           </div>
           <div className="top-actions">
+            {preferences}
             <span className="year-pill">
               2027 <CalendarBlank size={17} />
             </span>

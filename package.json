@@ -8,7 +8,7 @@
     "build": "vite build && node scripts/prepare-sites-build.mjs && node scripts/prepare-admin.mjs",
     "preview": "vite preview",
     "test:sites": "node --test tests/sites-worker.test.mjs",
-    "test": "node --test tests/copy-customer.test.mjs tests/add-customer.test.mjs tests/domain.test.js tests/roster-template.test.mjs tests/cascading-filters.test.mjs tests/activity-presence.test.mjs tests/specialty-report.test.mjs tests/standalone.test.mjs tests/external-expenses.test.mjs",
+    "test": "node --test tests/copy-customer.test.mjs tests/add-customer.test.mjs tests/domain.test.js tests/roster-template.test.mjs tests/cascading-filters.test.mjs tests/activity-presence.test.mjs tests/specialty-report.test.mjs tests/standalone.test.mjs tests/external-expenses.test.mjs tests/ui-preferences.test.mjs",
     "test:firebase": "firebase emulators:exec --only firestore,auth --project demo-actionplan \"node --test --test-concurrency=1 tests/spark-rules.test.mjs && node --test tests/spark-adapter.test.mjs && node --test --test-concurrency=1 tests/standalone-rules.test.mjs\""
   },
   "dependencies": {
