@@ -1,6 +1,6 @@
-import test from `node:test`;
-import assert from `node:assert/strict`;
-import {prepareManualCustomer} from `../src/data/add-customer.js`;
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {prepareManualCustomer} from '../src/data/add-customer.js';
 const finance={teams:{azord:{roster:`r1`}},pausedTeams:[],uploads:{}};
 const input={code:` 000123 `,name:` د. سارة `,teamId:`azord`,classification:`B`,kind:`طبيب`,specialty:`باطنية`,area:`عمان`};
 test(`manual creation preserves leading zeros and normalizes strings`,()=>{
