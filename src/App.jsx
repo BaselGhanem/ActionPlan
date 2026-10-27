@@ -1405,6 +1405,23 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds , sele
     [`team`,`الفريق`],[`month`,`الشهر`],[`type`,`نوع النشاط`],
     [`status`,`الحالة`],[`area`,`المنطقة`],[`specialty`,`التخصص`],[`classification`,`التصنيف`],
   ];
+  const activeReportFilters = [
+    ...(quarter ? [{key:`quarter`,label:`Quarter`,value:quarter}] : []),
+    ...filterFields.filter(([key])=>filters[key]!==``).map(([key,label])=>({
+      key,label,value:labelOf(key,filters[key]),
+    })),
+  ];
+  const clearReportFilter = key=>{
+    if(key===`quarter`){setQuarter(``);return;}
+    setFilters(prev=>({
+      ...prev,[key]:``,
+      ...(key===`team`?{classification:``}:{}),
+    }));
+  };
+  const clearAllReportFilters = ()=>{
+    setQuarter(``);
+    setFilters({month:``,type:``,status:``,team:``,area:``,specialty:``,classification:``});
+  };
   const groups = view === `specialties` ? groupBySpecialty(rows) : new Map();
   if (view !== `specialties`) rows.forEach((r) => {
     const key =
@@ -1494,6 +1511,23 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds , sele
             </select>
           </Field>
         ))}
+      </div>
+      <div className="report-active-filterbar" role="group" aria-label="الفلاتر المطبقة على التقرير">
+        <div className="report-active-filterbar-header">
+          <span className="report-active-filterbar-title">الفلاتر النشطة <span className="report-active-filter-count">{activeReportFilters.length}</span></span>
+          <button type="button" className="report-clear-all" onClick={clearAllReportFilters} disabled={!activeReportFilters.length} title="مسح جميع فلاتر التقرير">
+            <ArrowClockwise size={15}/> Clear Filters
+          </button>
+        </div>
+        <div className="report-active-filter-chips" aria-live="polite">
+          {activeReportFilters.length ? activeReportFilters.map(item=>(
+            <span className="report-active-filter-chip" key={item.key}>
+              <span className="report-active-filter-chip-name">{item.label}</span>
+              <span className="report-active-filter-chip-value" title={String(item.value)}>{item.value}</span>
+              <button type="button" onClick={()=>clearReportFilter(item.key)} aria-label={`مسح فلتر ${item.label}: ${item.value}`} title={`إزالة فلتر ${item.label}`}><X size={12}/></button>
+            </span>
+          )) : <span className="report-no-active-filters">لا توجد فلاتر مطبقة · يتم عرض جميع البيانات</span>}
+        </div>
       </div>
       <section className="surface">
         <div className="table-wrap">
