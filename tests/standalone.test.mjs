@@ -55,3 +55,13 @@ test(`selection badges deduplicate teams and keep Pedia separate from Standalone
  assert.deepEqual(badges.get(`008`),[`Pedia Activity`]);
  assert.equal(badges.has(`009`),false);
 });
+test(`selection classification isolates campaigns and never guesses from incomplete reads`,async()=>{
+ const {selectionStatusByCustomer}=await import(`../src/data/standalone.js`);
+ const choices=[{campaign:`uro`,teamId:`M`,code:`007`},{campaign:`uro`,teamId:`U`,code:`007`},{campaign:`uro`,teamId:`M`,code:`008`},{campaign:`ent-chest`,teamId:`A`,code:`008`}];
+ const result=selectionStatusByCustomer(choices,`uro`,`M`,true);
+ assert.deepEqual(result.get(`007`),{status:`matching`,otherTeams:[`U`]});
+ assert.deepEqual(result.get(`008`),{status:`unique`,otherTeams:[]});
+ assert.equal(result.has(`009`),false);
+ assert.equal(selectionStatusByCustomer(choices,`uro`,`M`,false).size,0);
+ assert.equal(selectionStatusByCustomer(choices.filter(c=>c.teamId!==`U`),`uro`,`M`,true).get(`007`).status,`unique`);
+});

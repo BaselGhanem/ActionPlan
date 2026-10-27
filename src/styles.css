@@ -2080,3 +2080,22 @@ tfoot td {
 
 .standalone-matched-name{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0}
 .standalone-matched-name b{overflow-wrap:anywhere}
+
+/* Campaign-scoped selection matching */
+.standalone-status-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:16px 0}
+.standalone-status-bar>small{color:#667b90;font-size:11px}
+.standalone-status-filters{display:flex;gap:5px;padding:5px;background:#eff4f8;border:1px solid #e0e8ef;border-radius:16px;max-width:100%;box-sizing:border-box}
+.standalone-status-filters .status-filter{display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;background:transparent;color:#52667e;border-radius:11px;padding:10px 14px;font-size:12px;min-height:44px;transition:background .18s,box-shadow .18s}
+.status-filter b{font-size:11px;min-width:22px;padding:2px 5px;border-radius:7px;background:#ffffffa6;color:inherit}
+.standalone-status-filters .status-filter.active{background:#fff;color:#0b457f;box-shadow:0 3px 12px #183c6510;border-color:#dee7ef}
+.standalone-status-filters .matching.active{color:#087f80;background:#e6f7f4;border-color:#9bd8d0}
+.standalone-status-filters .unique.active{color:#7050a5;background:#f2edfa;border-color:#d5c5ed}
+.status-filter:focus-visible{outline:3px solid #09999955;outline-offset:2px}
+.status-filter:disabled{opacity:.45;cursor:not-allowed}
+.standalone-status-label{display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;padding:5px 9px;border-radius:9px;font-size:10px;font-weight:700;line-height:1.5;border:1px solid;max-width:100%;box-sizing:border-box}
+.standalone-status-label.matching{color:#087c7b;background:#e3f6f2;border-color:#afe0d7}
+.standalone-status-label.unique{color:#7352a6;background:#f3eefb;border-color:#ddcff0}
+.standalone-matching-team{font-weight:400;overflow-wrap:anywhere}
+.standalone-doctor.selected.is-unique{background:linear-gradient(110deg,#f7f3fc,#fff);border-color:#dfd1ee;box-shadow:inset 3px 0 0 #9470bd}
+.standalone-doctor.selected.is-matching{background:linear-gradient(110deg,#eaf8f5,#fff);border-color:#9bd6cb;box-shadow:inset 3px 0 0 #099999}
+@media(max-width:480px){.standalone-status-filters{width:100%}.standalone-status-filters .status-filter{flex:1;gap:5px;padding:8px 5px;font-size:11px}.standalone-status-bar>small{line-height:1.8}.standalone-status-label{font-size:10px}}

@@ -51,3 +51,15 @@ export function matchStandAlone(choices,groups){
    matches:[...codeTeams].filter(([,ts])=>ts.size>1).map(([code,ts])=>({code,teams:[...ts]}))};
  });
 }
+
+/** Only classify selected doctors when the complete cross-team snapshot is available. */
+export function selectionStatusByCustomer(choices, campaign, teamId, complete=false){
+ const result=new Map();
+ if(!complete)return result;
+ const own=new Set(choices.filter(c=>c.campaign===campaign&&c.teamId===teamId).map(c=>String(c.code)));
+ for(const code of own){
+  const otherTeams=[...new Set(choices.filter(c=>c.campaign===campaign&&c.teamId!==teamId&&String(c.code)===code).map(c=>c.teamId))];
+  result.set(code,{status:otherTeams.length?`matching`:`unique`,otherTeams});
+ }
+ return result;
+}
