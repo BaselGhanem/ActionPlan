@@ -9,7 +9,7 @@ let env;
 const projectId=`demo-actionplan`;
 const customer=(i)=>({code:`C${i}`,name:`طبيب ${i}`,kind:`طبيب`,specialty:`قلب`,area:`عمان`,visitingTeams:Array.from({length:8},(_,j)=>`t${j}`),visits:Object.fromEntries(Array.from({length:8},(_,j)=>[`t${j}`,{roster:`r${j}`,classification:`A`,nextRoster:``,nextClassification:``}]))});
 const finance=()=>({teams:Object.fromEntries(Array.from({length:8},(_,j)=>[`t${j}`,{name:`Team ${j}`,budget:100000,used:0,roster:`r${j}`,accountId:j===0?`u1`:null}])),types:[`ندوة`],mutation:null});
-const profile=(role,accountId,teamId=null)=>({name:role,role,accountId,teamId,username:accountId,active:true,current:true});
+const profile=(role,accountId,teamId=null)=>({name:role,role,accountId,teamId,username:accountId,active:true,current:true,...(role===`manager`?{mustChangePassword:false}:{})});
 const draft=(amount=10000,count=1,teams=2)=>({type:`ندوة`,total:amount*count,actual:null,status:`planned`,date:``,notes:``,clients:Array.from({length:count},(_,i)=>({...customer(i),amount,actual:null,shares:Array.from({length:teams},(_,j)=>({teamId:`t${j}`,amount:amount/teams,actual:null}))}))});
 const db=(user=`u1`)=>env.authenticatedContext(user).firestore();
 async function seed(){await env.withSecurityRulesDisabled(async c=>{const d=c.firestore();await setDoc(doc(d,`finance/2027`),finance());await Promise.all([setDoc(doc(d,`users/u1`),profile(`team`,`u1`,`t0`)),setDoc(doc(d,`users/u2`),profile(`team`,`u2`,`t1`)),setDoc(doc(d,`users/admin`),profile(`admin`,`admin`)),setDoc(doc(d,`users/manager`),profile(`manager`,`manager`)),...Array.from({length:8},(_,i)=>setDoc(doc(d,`customers/C${i}`),customer(i))),...Array.from({length:8},(_,i)=>setDoc(doc(d,`budgets/t${i}`),{budget:100000,used:0,mutation:null}))]);});}
