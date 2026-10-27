@@ -144,11 +144,13 @@ test("admin can independently restrict one team; Firestore blocks unrelated cust
  await assertSucceeds(getDoc(doc(azord,"activities/only-m")));
 });
 
-test("cross-team matching remains admin-only even for manager roles",async()=>{
+test("admin and marketing manager can read cross-team matching; manager cannot change selections",async()=>{
  await bootstrap();
  await assertSucceeds(toggle("a","ent-chest","A","C0"));
- await assertFails(getDocs(collection(db("manager"),"standaloneChoices")));
- await assertFails(getDoc(choice(db("manager"),"ent-chest__A","C0")));
+ await assertSucceeds(getDocs(collection(db("manager"),"standaloneChoices")));
+ await assertSucceeds(getDocs(collection(db("manager"),"standaloneQuotas")));
+ await assertSucceeds(getDoc(choice(db("manager"),"ent-chest__A","C0")));
+ await assertFails(toggle("manager","ent-chest","A","C0",false));
  await assertFails(setDoc(quota(db("manager"),"ent-chest__M"),{campaign:"ent-chest",teamId:"M",limit:35,count:0}));
  const visible=await assertSucceeds(getDocs(collection(db("admin"),"standaloneChoices")));
  assert.equal(visible.size,1);

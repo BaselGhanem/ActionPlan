@@ -56,8 +56,8 @@ async function load(){const p=await profile();let f=await getDoc(financeRef);if(
   cachedCustomers?null:(limited?getDocs(query(collection(db,`customers`),where(`visitingTeams`,`array-contains`,p.teamId))):getDocs(collection(db,`customers`))),
   limited?getDocs(query(collection(db,`activities`),where(`teamIds`,`array-contains`,p.teamId))):getDocs(query(collection(db,`activities`),where(`year`,`==`,2027))),
   p.role===`admin`?getDocs(collection(db,`users`)):null,
-  p.role===`team`?getDocs(query(collection(db,`standaloneQuotas`),where(`teamId`,`==`,p.teamId))):p.role===`admin`?getDocs(collection(db,`standaloneQuotas`)):null,
-  p.role===`team`?getDocs(query(collection(db,`standaloneChoices`),where(`teamId`,`==`,p.teamId))):p.role===`admin`?getDocs(collection(db,`standaloneChoices`)):null,
+  p.role===`team`?getDocs(query(collection(db,`standaloneQuotas`),where(`teamId`,`==`,p.teamId))):[`admin`,`manager`].includes(p.role)?getDocs(collection(db,`standaloneQuotas`)).catch(error=>{if(p.role===`manager`&&error.code===`permission-denied`)return null;throw error;}):null,
+  p.role===`team`?getDocs(query(collection(db,`standaloneChoices`),where(`teamId`,`==`,p.teamId))):[`admin`,`manager`].includes(p.role)?getDocs(collection(db,`standaloneChoices`)).catch(error=>{if(p.role===`manager`&&error.code===`permission-denied`)return null;throw error;}):null,
   p.role===`admin`?getDocs(collection(db,`teamVisibility`)):null,
  ]);
  const fetchedCustomers=c?list(c):cachedCustomers;
@@ -85,7 +85,7 @@ async function load(){const p=await profile();let f=await getDoc(financeRef);if(
  return {profile:p,teams,customers,rosters,activities,visibilityHidden:limited,sharedTeamsByCustomer,
   settings:{types:financial.types},users:u?list(u).filter(u=>u.current!==false):[],
   teamVisibility:teamVisibility?list(teamVisibility):[],
-  standalone:{quotas:quotas?list(quotas):[],choices:choices?list(choices):[]}};}
+  standalone:{complete:choices!==null,quotas:quotas?list(quotas):[],choices:choices?list(choices):[]}};}
 async function saveActivity(payload,deleting=false){const p=await profile(),activityId=payload.id||id(),r=doc(db,`activities/${activityId}`);
  const [initialFinance,initialActivity]=await Promise.all([getDoc(financeRef),getDoc(r)]);
  const preparedFinancial=initialFinance.data(),preparedOld=initialActivity.exists()?initialActivity.data():null;

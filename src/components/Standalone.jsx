@@ -7,7 +7,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const [statusFilter,setStatusFilter]=useState(`all`);
  const [search,setSearch]=useState("");
  const [onlySelected,setOnlySelected]=useState(false);
- const profile=data.profile,privileged=profile.role==="admin";
+ const profile=data.profile,privileged=[`admin`,`manager`].includes(profile.role);
  const groups=useMemo(()=>visibleStandaloneGroups(data.teams,profile).filter(g=>mode==="pedia"?g.id==="pedia":g.id!=="pedia"),[data.teams,profile,mode]);
  const enabled=new Map((data.standalone?.quotas||[]).map(q=>[q.campaign+"__"+q.teamId,q]));
  const choices=data.standalone?.choices||[];
@@ -19,7 +19,8 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const roster=new Set(data.rosters.find(r=>r.teamId===current?.teamId)?.rows.map(c=>c.code)||[]);
  const participants=data.customers.filter(c=>
   current&&eligibleDoctor(current.id,{...c,visitingTeams:c.visitingTeams||[current.teamId]},current.teamId)&&roster.has(c.code));
- const statuses=useMemo(()=>selectionStatusByCustomer(choices,current?.id,current?.teamId,privileged),[choices,current?.id,current?.teamId,privileged]);
+ const statuses=useMemo(()=>selectionStatusByCustomer(choices,current?.id,current?.teamId,privileged&&data.standalone?.complete!==false),[choices,current?.id,current?.teamId,privileged,data.standalone?.complete]);
+ const canClassify=privileged&&data.standalone?.complete!==false;
  const showMatching=mode===`standalone`;
  const matchingCount=[...statuses.values()].filter(s=>s.status===`matching`).length;
  const uniqueCount=[...statuses.values()].filter(s=>s.status===`unique`).length;
@@ -58,9 +59,9 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
    </div>
    {showMatching&&<div className="standalone-status-bar">
     <div className="standalone-status-filters" role="group" aria-label="تصفية حسب المطابقة">
-     {[{id:`all`,label:`الكل`,count:participants.length},{id:`matching`,label:`Matching`,count:matchingCount},{id:`unique`,label:`Unique`,count:uniqueCount}].map(f=><button key={f.id} type="button" disabled={!privileged&&f.id!==`all`} aria-pressed={statusFilter===f.id} className={`status-filter ${f.id} ${statusFilter===f.id?`active`:``}`} onClick={()=>setStatusFilter(f.id)}>{f.id===`matching`?<Link size={16}/>:f.id===`unique`?<User size={16}/>:<UsersThree size={16}/>}<span>{f.label}</span><b>{privileged||f.id===`all`?f.count:`—`}</b></button>)}
+     {[{id:`all`,label:`الكل`,count:participants.length},{id:`matching`,label:`Matching`,count:matchingCount},{id:`unique`,label:`Unique`,count:uniqueCount}].map(f=><button key={f.id} type="button" disabled={!canClassify&&f.id!==`all`} aria-pressed={statusFilter===f.id} className={`status-filter ${f.id} ${statusFilter===f.id?`active`:``}`} onClick={()=>setStatusFilter(f.id)}>{f.id===`matching`?<Link size={16}/>:f.id===`unique`?<User size={16}/>:<UsersThree size={16}/>}<span>{f.label}</span><b>{canClassify||f.id===`all`?f.count:`—`}</b></button>)}
     </div>
-    <small>{privileged?`المطابقة للمختارين ضمن هذا المسار فقط`:`المطابقة متاحة للادمن فقط حسب صلاحيات قراءة اختيارات الفرق الحالية`}</small>
+    <small>{canClassify?`المطابقة للمختارين ضمن هذا المسار فقط`:privileged?`يلزم نشر قواعد Firestore المحدثة لتفعيل قراءة المطابقة`:`المطابقة متاحة للادمن ومدير التسويق فقط حسب صلاحيات قراءة اختيارات الفرق الحالية`}</small>
    </div>}
    <div className="standalone-list">{listed.map(c=>{
     const chosen=selectedCodes.has(c.code);
@@ -71,7 +72,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
       {classification.status===`matching`?<Link size={13} weight="bold"/>:<User size={13} weight="bold"/>}
       <span dir="ltr">{classification.status===`matching`?`Matching`:`Unique`}</span>{otherNames&&<span className="standalone-matching-team">مع <bdi>{otherNames}</bdi></span>}
      </span>}{(selectionLabels.get(String(c.code))||[]).map(label=><span key={label} className={`client-selection-label ${label===`Pedia Activity`?`is-pedia`:`is-standalone`}`}>{label}</span>)}</div><small>{c.code} • {c.specialty} • {c.area||"—"}</small></div>
-     <button type="button" disabled={busy||!quota||(!chosen&&current.quota>0&&count>=current.quota)} onClick={()=>onChoose({campaign:current.id,teamId:current.teamId,code:c.code,selected:!chosen})} className={chosen?"standalone-remove":"standalone-add"}>
+     <button type="button" disabled={profile.role===`manager`||busy||!quota||(!chosen&&current.quota>0&&count>=current.quota)} onClick={()=>onChoose({campaign:current.id,teamId:current.teamId,code:c.code,selected:!chosen})} className={chosen?"standalone-remove":"standalone-add"}>
       {chosen?<><Check size={16}/> مختار</>:<><Plus size={16}/> اختيار</>}
      </button>
     </div>;
@@ -79,7 +80,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
    {!listed.length&&<p className="standalone-empty">لا يوجد أطباء مطابقون للبحث أو التخصص المخصص لهذا المسار</p>}
    </div>
   </section>:<p className="standalone-notice">لم يتم العثور على اي فريق مخول لمسارات الاختيار المتاحة</p>}
-  {privileged&&<section className="surface standalone-matching">
+  {canClassify&&<section className="surface standalone-matching">
    <h3><UsersThree size={21}/> Matching — للأدمن والإدارة فقط</h3>
    <p>اختيارات الفرق مستقلة، ويُحسب الطبيب المشترك مرة واحدة ضمن إجمالي الأطباء الفريدين.</p>
    {matched.filter(m=>groups.some(g=>g.id===m.id)).map(m=><div key={m.id} className="standalone-match-block">

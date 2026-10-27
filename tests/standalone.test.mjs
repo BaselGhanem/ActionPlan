@@ -4,6 +4,7 @@ import {eligibleDoctor,visibleStandaloneGroups,matchStandAlone,specialtyMatches,
 test("configured quotas and team permissions",()=>{
  const teams=[{id:"A",name:"Azord"},{id:"M",name:"Matador"},{id:"U",name:"URO"},{id:"C",name:"Clavodar"},{id:"X",name:"Mixif"}];
  const admin=visibleStandaloneGroups(teams,{role:"admin"});
+ assert.deepEqual(visibleStandaloneGroups(teams,{role:`manager`}),admin);
  assert.deepEqual(admin.map(g=>[g.id,g.teamName,g.quota]),[["ent-chest","Azord",35],["ent-chest","Matador",35],["uro","Matador",25],["uro","URO",25],["pedia","Azord",0],["pedia","Clavodar",0],["pedia","Mixif",0]]);
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"M"}).map(g=>g.id),["ent-chest","uro"]);
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"A"}).map(g=>g.id),["ent-chest","pedia"]);

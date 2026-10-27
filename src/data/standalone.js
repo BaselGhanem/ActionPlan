@@ -30,7 +30,7 @@ export function selectionLabelsByCustomer(choices=[]){
  return new Map([...result].map(([code,labels])=>[code,[...labels].sort((a,b)=>Number(b===`Pedia Activity`)-Number(a===`Pedia Activity`))]));
 }
 export function visibleStandaloneGroups(teams,profile){
- const privileged=profile?.role==="admin";
+ const privileged=[`admin`,`manager`].includes(profile?.role);
  return STANDALONE_CAMPAIGNS.flatMap(c=>teams
   .filter(t=>teamForCampaign(c,t)&&(privileged||t.id===profile?.teamId))
   .map(t=>({...c,teamId:t.id,teamName:t.name,key:c.id+"__"+t.id})));

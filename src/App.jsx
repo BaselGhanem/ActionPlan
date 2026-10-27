@@ -357,7 +357,7 @@ export function App() {
   },[data?.visibilityHidden,data?.teams]);
   const directoryPageSize=50;
   const manager = data && [`admin`, `manager`].includes(data.profile.role);
-  const allowed = routes.filter((r) => (r.id !== `admin` || manager) && (![`standalone`,`pedia`].includes(r.id) || data?.profile.role !== `manager`));
+  const allowed = routes.filter((r) => (r.id !== `admin` || manager) && (r.id !== `pedia` || data?.profile.role !== `manager`));
   const activityCounts = useMemo(
     () => activityCountsByCustomer(data?.activities || []),
     [data?.activities],
