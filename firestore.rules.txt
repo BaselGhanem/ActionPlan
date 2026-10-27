@@ -1,0 +1,491 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signed() { return request.auth != null; }
+  function user() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+  function active() { return signed() && user().active == true && (user().role != 'manager' || user().get('mustChangePassword',true) == false); }
+  function admin() { return active() && user().role == 'admin'; }
+  function manager() { return active() && user().role in ['admin','manager']; }
+  function principal() { return user().get('accountId', request.auth.uid); }
+  function validMoney(n) { return n is int && n >= 0 && n <= 100000000000; }
+  function fAfter() { return getAfter(/databases/$(database)/documents/finance/2027).data; }
+  function sumMap(m,ids) { let n=ids.size(); return n == 1 ? (m.get(ids[0],0)) : n == 2 ? (m.get(ids[0],0) + m.get(ids[1],0)) : n == 3 ? (m.get(ids[0],0) + m.get(ids[1],0) + m.get(ids[2],0)) : n == 4 ? (m.get(ids[0],0) + m.get(ids[1],0) + m.get(ids[2],0) + m.get(ids[3],0)) : n == 5 ? (m.get(ids[0],0) + m.get(ids[1],0) + m.get(ids[2],0) + m.get(ids[3],0) + m.get(ids[4],0)) : n == 6 ? (m.get(ids[0],0) + m.get(ids[1],0) + m.get(ids[2],0) + m.get(ids[3],0) + m.get(ids[4],0) + m.get(ids[5],0)) : n == 7 ? (m.get(ids[0],0) + m.get(ids[1],0) + m.get(ids[2],0) + m.get(ids[3],0) + m.get(ids[4],0) + m.get(ids[5],0) + m.get(ids[6],0)) : (m.get(ids[0],0) + m.get(ids[1],0) + m.get(ids[2],0) + m.get(ids[3],0) + m.get(ids[4],0) + m.get(ids[5],0) + m.get(ids[6],0) + m.get(ids[7],0)); }
+  function sumPlans(a,t) { let n=a.clientKeys.size(); return n == 1 ? (a.rows[a.clientKeys[0]].plan.get(t,0)) : n == 2 ? (a.rows[a.clientKeys[0]].plan.get(t,0) + a.rows[a.clientKeys[1]].plan.get(t,0)) : n == 3 ? (a.rows[a.clientKeys[0]].plan.get(t,0) + a.rows[a.clientKeys[1]].plan.get(t,0) + a.rows[a.clientKeys[2]].plan.get(t,0)) : n == 4 ? (a.rows[a.clientKeys[0]].plan.get(t,0) + a.rows[a.clientKeys[1]].plan.get(t,0) + a.rows[a.clientKeys[2]].plan.get(t,0) + a.rows[a.clientKeys[3]].plan.get(t,0)) : n == 5 ? (a.rows[a.clientKeys[0]].plan.get(t,0) + a.rows[a.clientKeys[1]].plan.get(t,0) + a.rows[a.clientKeys[2]].plan.get(t,0) + a.rows[a.clientKeys[3]].plan.get(t,0) + a.rows[a.clientKeys[4]].plan.get(t,0)) : n == 6 ? (a.rows[a.clientKeys[0]].plan.get(t,0) + a.rows[a.clientKeys[1]].plan.get(t,0) + a.rows[a.clientKeys[2]].plan.get(t,0) + a.rows[a.clientKeys[3]].plan.get(t,0) + a.rows[a.clientKeys[4]].plan.get(t,0) + a.rows[a.clientKeys[5]].plan.get(t,0)) : n == 7 ? (a.rows[a.clientKeys[0]].plan.get(t,0) + a.rows[a.clientKeys[1]].plan.get(t,0) + a.rows[a.clientKeys[2]].plan.get(t,0) + a.rows[a.clientKeys[3]].plan.get(t,0) + a.rows[a.clientKeys[4]].plan.get(t,0) + a.rows[a.clientKeys[5]].plan.get(t,0) + a.rows[a.clientKeys[6]].plan.get(t,0)) : (a.rows[a.clientKeys[0]].plan.get(t,0) + a.rows[a.clientKeys[1]].plan.get(t,0) + a.rows[a.clientKeys[2]].plan.get(t,0) + a.rows[a.clientKeys[3]].plan.get(t,0) + a.rows[a.clientKeys[4]].plan.get(t,0) + a.rows[a.clientKeys[5]].plan.get(t,0) + a.rows[a.clientKeys[6]].plan.get(t,0) + a.rows[a.clientKeys[7]].plan.get(t,0)); }
+  function sumSpent(a,t) { let n=a.clientKeys.size(); return n == 1 ? (a.rows[a.clientKeys[0]].spent.get(t,0)) : n == 2 ? (a.rows[a.clientKeys[0]].spent.get(t,0) + a.rows[a.clientKeys[1]].spent.get(t,0)) : n == 3 ? (a.rows[a.clientKeys[0]].spent.get(t,0) + a.rows[a.clientKeys[1]].spent.get(t,0) + a.rows[a.clientKeys[2]].spent.get(t,0)) : n == 4 ? (a.rows[a.clientKeys[0]].spent.get(t,0) + a.rows[a.clientKeys[1]].spent.get(t,0) + a.rows[a.clientKeys[2]].spent.get(t,0) + a.rows[a.clientKeys[3]].spent.get(t,0)) : n == 5 ? (a.rows[a.clientKeys[0]].spent.get(t,0) + a.rows[a.clientKeys[1]].spent.get(t,0) + a.rows[a.clientKeys[2]].spent.get(t,0) + a.rows[a.clientKeys[3]].spent.get(t,0) + a.rows[a.clientKeys[4]].spent.get(t,0)) : n == 6 ? (a.rows[a.clientKeys[0]].spent.get(t,0) + a.rows[a.clientKeys[1]].spent.get(t,0) + a.rows[a.clientKeys[2]].spent.get(t,0) + a.rows[a.clientKeys[3]].spent.get(t,0) + a.rows[a.clientKeys[4]].spent.get(t,0) + a.rows[a.clientKeys[5]].spent.get(t,0)) : n == 7 ? (a.rows[a.clientKeys[0]].spent.get(t,0) + a.rows[a.clientKeys[1]].spent.get(t,0) + a.rows[a.clientKeys[2]].spent.get(t,0) + a.rows[a.clientKeys[3]].spent.get(t,0) + a.rows[a.clientKeys[4]].spent.get(t,0) + a.rows[a.clientKeys[5]].spent.get(t,0) + a.rows[a.clientKeys[6]].spent.get(t,0)) : (a.rows[a.clientKeys[0]].spent.get(t,0) + a.rows[a.clientKeys[1]].spent.get(t,0) + a.rows[a.clientKeys[2]].spent.get(t,0) + a.rows[a.clientKeys[3]].spent.get(t,0) + a.rows[a.clientKeys[4]].spent.get(t,0) + a.rows[a.clientKeys[5]].spent.get(t,0) + a.rows[a.clientKeys[6]].spent.get(t,0) + a.rows[a.clientKeys[7]].spent.get(t,0)); }
+  function charge(a,t) { return a == null || a.status == 'deleted' ? 0 : (a.status == 'planned' ? a.totals.get(t,0) : a.actualTotals.get(t,0)); }
+  function actualCharge(a,t) { return a.status == 'deleted' ? 0 : a.actualTotals.get(t,0); }
+  function visited(c,t,f) {
+   let v=c.get('visits',{}).get(t,{});
+   let roster=f.teams.get(t,{}).get('roster',null);
+   return roster != null && (v.get('roster','') == roster || v.get('nextRoster','') == roster);
+  }
+  function retained(old,k,t) { return old != null && old.rows.get(k,{}).get('plan',{}).keys().hasAny([t]); }
+  function validShare(a,old,f,c,key,t,customer) {
+   return validMoney(c.plan.get(t,0)) && validMoney(c.spent.get(t,0)) &&
+    (!c.plan.keys().hasAny([t]) || visited(customer,t,f) || retained(old,key,t));
+  }
+  function moneyMap(m) { return m is map && m.values().join(',').matches('[0-9]{1,12}(,[0-9]{1,12})*'); }
+  function validRow(a,old,f,key) {
+   let c=a.rows[key];
+   let customer=get(/databases/$(database)/documents/customers/$(key)).data;
+   let retained=old == null ? [] : old.rows.get(key,{}).get('plan',{}).keys();
+   let fresh=c.plan.keys().toSet().difference(retained.toSet());
+   let p=user();
+   return c.keys().hasOnly(['code','name','kind','specialty','area','amount','actual','plan','spent']) &&
+    c.code == customer.code && c.name is string && c.name.size() <= 200 &&
+    c.kind is string && c.specialty is string && c.area is string &&
+    validMoney(c.amount) && c.amount > 0 && validMoney(c.actual) &&
+    moneyMap(c.plan) && moneyMap(c.spent) &&
+    c.plan.keys().hasOnly(a.teamIds) && c.spent.keys().toSet() == c.plan.keys().toSet() &&
+    c.amount == sumMap(c.plan,a.teamIds) && (a.actual == null ? c.spent.values().join(',').matches('0(,0)*') : c.actual == sumMap(c.spent,a.teamIds)) &&
+    (a.actual != null || c.actual == 0) &&
+    (p.role != 'team' || retainedClient(old,key) || customer.visitingTeams.hasAny([p.teamId])) &&
+    fresh.hasOnly(customer.visitingTeams) && !fresh.hasAny(f.get('pausedTeams',[]));
+  }
+  function retainedClient(old,k) { return old != null && old.rows.keys().hasAny([k]); }
+
+  function validCostItem(x) {
+   return x is map && x.keys().hasOnly(['id','category','label','amount']) &&
+    x.keys().hasAll(['id','category','label','amount']) &&
+    x.id is string && x.id.matches('[a-zA-Z0-9_-]{1,64}') &&
+    x.category in ['client','meal','venue','logistics','other'] &&
+    x.label is string && x.label.size() > 0 && x.label.size() <= 140 &&
+    validMoney(x.amount) && x.amount > 0;
+  }
+  function checkCostItem(items,i) {return items.size() <= i || validCostItem(items[i]);}
+  function costAmount(items,i) {return items.size() > i ? items[i].amount : 0;}
+  function validCostItems(a) {
+   let items=a.get('costItems',[]);
+   return items is list && items.size() <= 8 &&
+    checkCostItem(items,0) && checkCostItem(items,1) &&
+    checkCostItem(items,2) && checkCostItem(items,3) &&
+    checkCostItem(items,4) && checkCostItem(items,5) &&
+    checkCostItem(items,6) && checkCostItem(items,7) &&
+    (items.size() == 0 ||
+      costAmount(items,0) + costAmount(items,1) + costAmount(items,2) + costAmount(items,3) +
+      costAmount(items,4) + costAmount(items,5) + costAmount(items,6) + costAmount(items,7) == a.total);
+  }
+  function costHonorariumAmount(items,i) {
+   return items.size() > i && items[i].category == 'client' ? items[i].amount : 0;
+  }
+  function honorariumTotal(a) {
+   let items=a.get('costItems',[]);
+   return costHonorariumAmount(items,0)+costHonorariumAmount(items,1)+
+    costHonorariumAmount(items,2)+costHonorariumAmount(items,3)+
+    costHonorariumAmount(items,4)+costHonorariumAmount(items,5)+
+    costHonorariumAmount(items,6)+costHonorariumAmount(items,7);
+  }
+  function validHonorariumShares(a){
+   let shares=a.get('honorariumShares',{});
+   return shares is map && shares.size() <= 8 &&
+    (shares.size() == 0 ||
+     (a.schema == 3 && moneyMap(shares) &&
+      shares.keys().toSet().hasOnly(a.clientKeys) &&
+      sumMap(shares,a.clientKeys) == honorariumTotal(a)));
+  }
+  function validRow3(a,old,key){
+   let c=a.rows[key];
+   let customer=get(/databases/$(database)/documents/customers/$(key)).data;
+   let p=user();
+   return c.keys().hasOnly(['code','name','kind','specialty','area']) &&
+    c.keys().hasAll(['code','name','kind','specialty','area']) &&
+    c.code == customer.code && c.name is string && c.name.size() <= 200 &&
+    c.kind is string && c.specialty is string && c.area is string &&
+    (p.role != 'team' || retainedClient(old,key) || customer.visitingTeams.hasAny([p.teamId]));
+  }
+  function connectedClient(a,old,f,t,k){
+   let customer=get(/databases/$(database)/documents/customers/$(k)).data;
+   return visited(customer,t,f) ||
+    (old != null && old.teamIds.hasAny([t]) && old.clientKeys.hasAny([k]));
+  }
+  function validTotals3(a,old,f,t){
+   return validMoney(a.totals[t]) && validMoney(a.actualTotals[t]) &&
+    (a.actual != null || a.actualTotals[t] == 0) &&
+    ((a.clientKeys.size()>0 && connectedClient(a,old,f,t,a.clientKeys[0])) ||
+     (a.clientKeys.size()>1 && connectedClient(a,old,f,t,a.clientKeys[1])) ||
+     (a.clientKeys.size()>2 && connectedClient(a,old,f,t,a.clientKeys[2])) ||
+     (a.clientKeys.size()>3 && connectedClient(a,old,f,t,a.clientKeys[3])) ||
+     (a.clientKeys.size()>4 && connectedClient(a,old,f,t,a.clientKeys[4])) ||
+     (a.clientKeys.size()>5 && connectedClient(a,old,f,t,a.clientKeys[5])) ||
+     (a.clientKeys.size()>6 && connectedClient(a,old,f,t,a.clientKeys[6])) ||
+     (a.clientKeys.size()>7 && connectedClient(a,old,f,t,a.clientKeys[7])));
+  }
+  function validTotals(a,t) { return a.totals[t] == sumPlans(a,t) && (a.actual == null || a.actualTotals[t] == sumSpent(a,t)); }
+  function validActivity(a,old) {
+   let f=fAfter();
+   let p=user();
+   let privileged=p.role in ['admin','manager'];
+   return signed() && p.active && a.keys().hasOnly(['schema','proofId','year','creator','createdAt','updatedAt','editedBy','rev','status','type','total','actual','date','notes','teamIds','clientKeys','rows','totals','actualTotals','costItems','honorariumShares']) &&
+    a.schema in [2,3] && a.year == 2027 && a.editedBy == request.auth.uid && a.updatedAt == 0 &&
+    a.createdAt is int && (old == null ? (a.creator == p.get('accountId',request.auth.uid) && a.rev == 1) : (a.creator == old.creator && a.createdAt == old.createdAt && a.rev == old.rev + 1)) &&
+    (old == null || privileged || old.creator == p.get('accountId',request.auth.uid)) &&
+    a.status in ['planned','executed','cancelled'] && (a.status != 'cancelled' || (old != null && privileged)) &&
+    (old == null || old.status != 'cancelled' || privileged) &&
+    (a.status != 'cancelled' || old.actual == null || a.actual == old.actual) &&
+    a.type is string && a.type in f.types && a.notes is string && a.notes.size() <= 3000 &&
+    a.date is string && (a.date == '' || a.date.matches('2027-((01|03|05|07|08|10|12)-(0[1-9]|[12][0-9]|3[01])|(04|06|09|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))')) &&
+    validMoney(a.total) && a.total > 0 && (a.actual == null || validMoney(a.actual)) && (a.status != 'executed' || a.actual != null) &&
+    a.teamIds is list && a.teamIds.size() > 0 && a.teamIds.size() <= 8 && a.teamIds.toSet().size() == a.teamIds.size() && a.teamIds.toSet().hasOnly(f.teams.keys()) &&
+    a.clientKeys is list && a.clientKeys.size() > 0 && a.clientKeys.size() <= 8 && a.clientKeys.toSet().size() == a.clientKeys.size() &&
+    a.rows is map && a.rows.keys().toSet() == a.clientKeys.toSet() &&
+    a.totals is map && a.actualTotals is map && a.totals.keys().toSet() == a.teamIds.toSet() && a.actualTotals.keys().toSet() == a.teamIds.toSet() &&
+    a.total == sumMap(a.totals,a.teamIds) && (a.actual == null ? a.actualTotals.values().join(',').matches('0(,0)*') : a.actual == sumMap(a.actualTotals,a.teamIds)) &&
+    true;
+
+  }
+  function proposal(id) { return get(/databases/$(database)/documents/proposals/$(id)).data; }
+  function proposedOld(p) { let path=/databases/$(database)/documents/activities/$(p.activityId); return exists(path) ? get(path).data : null; }
+  function proposalOwner(p) { return active() && p.owner == request.auth.uid; }
+  function baseCurrent(p) { let old=proposedOld(p); return p.baseRev == (old == null ? 0 : old.rev); }
+  function verifiedProposal(a,old,f) {
+   let p=proposal(a.proofId);
+   return p.authz == {'role':user().role,'teamId':user().get('teamId',null),'accountId':principal()} && p.owner == request.auth.uid && p.activityId == f.mutation.activityId && p.baseRev == (old == null ? 0 : old.rev) && p.rosterEpoch == f.get('rosterEpoch',0) &&
+    a.diff(p.body).affectedKeys().hasOnly(['updatedAt']) &&
+    get(/databases/$(database)/documents/proposals/$(a.proofId)/checks/rows).data.ok == true &&
+    get(/databases/$(database)/documents/proposals/$(a.proofId)/checks/totals).data.ok == true &&
+    ((a.get('costItems',[]).size() == 0 && a.get('honorariumShares',{}).size() == 0) ||
+     get(/databases/$(database)/documents/proposals/$(a.proofId)/checks/costs).data.ok == true);
+  }
+  function receipt(a,activityId,old) { let m=fAfter().mutation; return m.activityId == activityId && m.rev == a.rev && m.uid == request.auth.uid && m.after == a && m.before == old && getAfter(/databases/$(database)/documents/audit/$(activityId + '_' + string(a.rev))).data == m; }
+  function validBalance(old,a,t) {
+   let next=request.resource.data.teams[t];
+   let budget=getAfter(/databases/$(database)/documents/budgets/$(t)).data;
+   let m=request.resource.data.mutation;
+   return next.diff(resource.data.teams[t]).affectedKeys().hasOnly(['used']) && next.used == budget.used && next.budget == budget.budget && budget.mutation.activityId == m.activityId && budget.mutation.rev == m.rev && budget.mutation.uid == request.auth.uid && budget.mutation.at == request.time;
+  }
+  function activityFinance() {
+   let m=request.resource.data.mutation;
+   let old=m.before;
+   let a=m.after;
+   let ids=m.affectedTeams;
+   let path=/databases/$(database)/documents/activities/$(m.activityId);
+   return active() && m.kind in ['saveActivity','deleteActivity'] && m.uid == request.auth.uid && m.at == request.time &&
+    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teams','mutation']) && ids is list && ids.size() <= 8 && ids.toSet().size() == ids.size() && ids.toSet() == (old == null ? [] : old.teamIds).toSet().union(a.teamIds.toSet()) &&
+    m.rev == a.rev &&
+    request.resource.data.teams.keys().toSet() == resource.data.teams.keys().toSet() &&
+    request.resource.data.teams.diff(resource.data.teams).affectedKeys().hasOnly(ids) &&
+(ids.size() <= 0 || validBalance(old,a,ids[0])) &&
+    (ids.size() <= 1 || validBalance(old,a,ids[1])) &&
+    (ids.size() <= 2 || validBalance(old,a,ids[2])) &&
+    (ids.size() <= 3 || validBalance(old,a,ids[3])) &&
+    (ids.size() <= 4 || validBalance(old,a,ids[4])) &&
+    (ids.size() <= 5 || validBalance(old,a,ids[5])) &&
+    (ids.size() <= 6 || validBalance(old,a,ids[6])) &&
+    (ids.size() <= 7 || validBalance(old,a,ids[7]));
+  }
+  function sameTeamExcept(t,keys) { return request.resource.data.teams[t].diff(resource.data.teams[t]).affectedKeys().hasOnly(keys); }
+  function metadataFinance() {
+   let n=request.resource.data;
+   let old=resource.data;
+   let m=n.mutation;
+   let t=m.get('teamId','_');
+   let next=n.teams.get(t,{});
+   let prev=old.teams.get(t,{});
+   return n.get('rosterEpoch',0) == old.get('rosterEpoch',0) && n.get('pausedTeams',[]) == old.get('pausedTeams',[]) && n.get('uploads',{}) == old.get('uploads',{}) && manager() && m.uid == request.auth.uid && m.at == request.time && n.keys().hasOnly(['teams','types','mutation','pausedTeams','rosterEpoch','uploads']) &&
+    ((m.kind == 'saveTypes' && n.teams == old.teams && n.types is list && n.types.size() > 0 && n.types.size() <= 200) ||
+     (n.types == old.types && n.teams.diff(old.teams).affectedKeys().hasOnly([t]) && n.teams.keys().hasAll(old.teams.keys()) &&
+      ((m.kind == 'saveTeam' && next.keys().hasOnly(['name','budget','used','roster','accountId']) && next.name is string && next.name.size() > 0 && next.name.size() <= 200 && validMoney(next.budget) && next.used == prev.get('used',0) && next.budget >= next.used && next.roster == prev.get('roster',null) && next.accountId == prev.get('accountId',null) && getAfter(/databases/$(database)/documents/budgets/$(t)).data.budget == next.budget && getAfter(/databases/$(database)/documents/budgets/$(t)).data.used == next.used) ||
+       (admin() && old.teams.keys().hasAny([t]) && ((m.kind in ['startImport','finishImport'] && sameTeamExcept(t,['roster'])) || (m.kind == 'account' && sameTeamExcept(t,['accountId'])))))));
+  }
+  match /proposals/{pid} {
+   allow read: if active();
+   allow create: if active() && request.resource.data.keys().hasOnly(['authz','owner','baseRev','rosterEpoch','activityId','body','createdAt']) && request.resource.data.authz == {'role':user().role,'teamId':user().get('teamId',null),'accountId':principal()} && request.resource.data.owner == request.auth.uid && request.resource.data.createdAt == request.time && request.resource.data.body.proofId == pid && request.resource.data.body.clientKeys.size() <= 8 && request.resource.data.body.teamIds.size() <= 8 && validActivity(request.resource.data.body,proposedOld(request.resource.data));
+   allow update,delete: if false;
+   match /rows/{key} {
+    allow read: if active();
+    allow create: if request.resource.data == {'ok':true} && proposalOwner(proposal(pid)) && baseCurrent(proposal(pid)) && proposal(pid).body.clientKeys.hasAny([key]) && proposal(pid).rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0) && (proposal(pid).body.schema == 3 ? validRow3(proposal(pid).body,proposedOld(proposal(pid)),key) : validRow(proposal(pid).body,proposedOld(proposal(pid)),get(/databases/$(database)/documents/finance/2027).data,key));
+   }
+   match /totals/{teamId} {
+    allow read: if active();
+    allow create: if request.resource.data == {'ok':true} && proposalOwner(proposal(pid)) && proposal(pid).body.teamIds.hasAny([teamId]) && (proposal(pid).body.schema == 3 ? validTotals3(proposal(pid).body,proposedOld(proposal(pid)),get(/databases/$(database)/documents/finance/2027).data,teamId) : validTotals(proposal(pid).body,teamId));
+   }
+   match /checks/{kind} {
+    allow read: if active();
+    allow create: if request.resource.data == {'ok':true} && proposalOwner(proposal(pid)) && ((kind == 'rows' && rowChecks(pid,proposal(pid))) || (kind == 'totals' && totalChecks(pid,proposal(pid))) ||
+     (kind == 'costs' && validCostItems(proposal(pid).body) && validHonorariumShares(proposal(pid).body)));
+   }
+  }
+  function rowChecks(pid,p) { return (p.body.clientKeys.size() <= 0 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[0]))) && (p.body.clientKeys.size() <= 1 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[1]))) && (p.body.clientKeys.size() <= 2 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[2]))) && (p.body.clientKeys.size() <= 3 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[3]))) && (p.body.clientKeys.size() <= 4 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[4]))) && (p.body.clientKeys.size() <= 5 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[5]))) && (p.body.clientKeys.size() <= 6 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[6]))) && (p.body.clientKeys.size() <= 7 || exists(/databases/$(database)/documents/proposals/$(pid)/rows/$(p.body.clientKeys[7]))); }
+  function totalChecks(pid,p) { return (p.body.teamIds.size() <= 0 || exists(/databases/$(database)/documents/proposals/$(pid)/totals/$(p.body.teamIds[0]))) && (p.body.teamIds.size() <= 1 || exists(/databases/$(database)/documents/proposals/$(pid)/totals/$(p.body.teamIds[1]))) && (p.body.teamIds.size() <= 2 || exists(/databases/$(database)/documents/proposals/$(pid)/totals/$(p.body.teamIds[2]))) && (p.body.teamIds.size() <= 3 || exists(/databases/$(database)/documents/proposals/$(pid)/totals/$(p.body.teamIds[3]))) && (p.body.teamIds.size() <= 4 || exists(/databases/$(database)/documents/proposals/$(pid)/totals/$(p.body.teamIds[4]))) && (p.body.teamIds.size() <= 5 || exists(/databases/$(database)/documents/proposals/$(pid)/totals/$(p.body.teamIds[5]))) && (p.body.teamIds.size() <= 6 || exists(/databases/$(database)/documents/proposals/$(pid)/totals/$(p.body.teamIds[6]))) && (p.body.teamIds.size() <= 7 || exists(/databases/$(database)/documents/proposals/$(pid)/totals/$(p.body.teamIds[7]))); }
+  function importFinance() {
+   let n=request.resource.data;
+   let old=resource.data;
+   let m=n.mutation;
+   let t=m.get('teamId','_');
+   return admin() && m.kind in ['startImport','importChunk','finishImport'] && m.uid == request.auth.uid && m.at == request.time && n.rosterEpoch == old.get('rosterEpoch',0)+1 &&
+    n.diff(old).affectedKeys().hasOnly(['teams','mutation','rosterEpoch','pausedTeams','uploads']) && n.teams.keys().toSet() == old.teams.keys().toSet() && n.teams.diff(old.teams).affectedKeys().hasOnly([t]) && sameTeamExcept(t,['roster']);
+  }
+  function copiedCustomerValid(code,m,old,n,f) {
+   let target=m.targetTeamId;
+   return m.sourceTeamId != target && f.teams.keys().hasAll([m.sourceTeamId,target]) &&
+    old.get('deleted',false) != true && old.visitingTeams.hasAny([m.sourceTeamId]) && !old.visitingTeams.hasAny([target]) &&
+    m.classification in ['HH','HL','HM','LH','LL','LM','MH','ML','MM'] && n.diff(old).affectedKeys().hasOnly(['visits','visitingTeams','updatedAt']) &&
+    n.visitingTeams == old.visitingTeams.concat([target]) &&
+    n.visits.diff(old.get('visits',{})).affectedKeys().hasOnly([target]) &&
+    n.visits[target] == {'classification':m.classification,'roster':f.teams[target].get('roster',null)} &&
+    n.updatedAt == request.time;
+  }
+  function copyFinance(){
+   let n=request.resource.data;
+   let old=resource.data;
+   let m=n.mutation;
+   let path=/databases/$(database)/documents/customers/$(m.code);
+   let audit=getAfter(/databases/$(database)/documents/audit/$(m.auditId)).data;
+   return admin() && m.kind == 'copyCustomer' && m.uid == request.auth.uid && m.at == request.time &&
+    n.diff(old).affectedKeys().hasOnly(['rosterEpoch','mutation']) && n.rosterEpoch == old.get('rosterEpoch',0)+1 &&
+    old.get('pausedTeams',[]).size() == 0 && old.get('uploads',{}).size() == 0 &&
+    copiedCustomerValid(m.code,m,get(path).data,getAfter(path).data,old) &&
+    audit.kind == 'copyCustomer' && audit.uid == request.auth.uid && audit.at == request.time &&
+    audit.after == {'code':get(path).data.code,'sourceTeamId':m.sourceTeamId,'targetTeamId':m.targetTeamId,'classification':m.classification};
+  }
+  function copyCustomer(code){
+   let f=fAfter();
+   let m=f.mutation;
+   return admin() && m.kind == 'copyCustomer' && m.code == code && m.uid == request.auth.uid && m.at == request.time &&
+    f.rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1 &&
+    copiedCustomerValid(code,m,resource.data,request.resource.data,f);
+  }
+  function manuallyCreatedCustomerValid(code,m,c,f) {
+   let team=m.teamId;
+   return m.code == code && team is string && f.teams.keys().hasAny([team]) &&
+    m.rawCode is string && m.rawCode.size() > 0 && m.rawCode.size() <= 100 && !m.rawCode.matches('.*[/].*') &&
+    m.classification in ['HH','HL','HM','LH','LL','LM','MH','ML','MM'] &&
+    c.keys().hasOnly(['code','name','kind','specialty','area','deleted','visitingTeams','visits','createdAt','createdBy','updatedAt']) &&
+    c.keys().hasAll(['code','name','kind','specialty','area','deleted','visitingTeams','visits','createdAt','createdBy','updatedAt']) &&
+    c.code == m.rawCode && c.name is string && c.name.size() > 0 && c.name.size() <= 200 &&
+    c.kind is string && c.kind.size() > 0 && c.kind.size() <= 200 &&
+    c.specialty is string && c.specialty.size() <= 200 && c.area is string && c.area.size() <= 200 &&
+    c.deleted == false && c.visitingTeams == [team] &&
+    c.visits.keys().hasOnly([team]) && c.visits.keys().hasAll([team]) &&
+    c.visits[team] == {'classification':m.classification,'roster':f.teams[team].get('roster',null)} &&
+    c.createdAt == request.time && c.updatedAt == request.time && c.createdBy == request.auth.uid;
+  }
+  function manualCustomerFinance() {
+   let n=request.resource.data;
+   let old=resource.data;
+   let m=n.mutation;
+   let path=/databases/$(database)/documents/customers/$(m.code);
+   let audit=getAfter(/databases/$(database)/documents/audit/$(m.auditId)).data;
+   return admin() && m.kind == 'createCustomer' && m.uid == request.auth.uid && m.at == request.time &&
+    m.keys().hasOnly(['kind','uid','at','code','rawCode','teamId','classification','auditId']) &&
+    n.diff(old).affectedKeys().hasOnly(['rosterEpoch','mutation']) &&
+    n.rosterEpoch == old.get('rosterEpoch',0)+1 &&
+    old.get('pausedTeams',[]).size() == 0 && old.get('uploads',{}).keys().size() == 0 &&
+    !exists(path) && existsAfter(path) && manuallyCreatedCustomerValid(m.code,m,getAfter(path).data,old) &&
+    audit.kind == 'createCustomer' && audit.uid == request.auth.uid && audit.at == request.time &&
+    audit.after == {'code':m.rawCode,'teamId':m.teamId,'classification':m.classification};
+  }
+  function manualCustomer(code) {
+   let f=fAfter();
+   let m=f.mutation;
+   return admin() && m.kind == 'createCustomer' && m.code == code && m.uid == request.auth.uid && m.at == request.time &&
+    f.rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1 &&
+    manuallyCreatedCustomerValid(code,m,request.resource.data,f);
+  }
+  function archiveFinance(){
+   let n=request.resource.data;
+   let old=resource.data;
+   let m=n.mutation;
+   let auditPath=/databases/$(database)/documents/audit/$(m.batchId);
+   return admin() && m.kind == 'archiveCustomers' && m.uid == request.auth.uid && m.at == request.time &&
+    m.codes is list && m.codes.size() > 0 && m.codes.size() <= 10 &&
+    m.codes.toSet().size() == m.codes.size() && m.count == m.codes.size() &&
+    n.diff(old).affectedKeys().hasOnly(['rosterEpoch','mutation']) &&
+    n.get('rosterEpoch',0) == old.get('rosterEpoch',0)+1 &&
+    old.get('pausedTeams',[]).size() == 0 && old.get('uploads',{}).keys().size() == 0 &&
+    getAfter(auditPath).data.kind == 'archiveCustomers' &&
+    getAfter(auditPath).data.uid == request.auth.uid &&
+    getAfter(auditPath).data.at == request.time &&
+    getAfter(auditPath).data.after == {'codes':m.codes,'count':m.count};
+  }
+  function archiveCustomer(code){
+   let m=fAfter().mutation;
+   let n=request.resource.data;
+   return admin() && m.kind == 'archiveCustomers' && m.uid == request.auth.uid &&
+    m.codes.hasAny([code]) && resource.data.get('deleted',false) != true &&
+    n.diff(resource.data).affectedKeys().hasOnly(['deleted','visitingTeams','visits','archivedBy','archivedAt','updatedAt']) &&
+    n.deleted == true && n.visitingTeams == [] && n.visits == {} &&
+    n.archivedBy == request.auth.uid && n.archivedAt == request.time && n.updatedAt == request.time &&
+    fAfter().rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1;
+  }
+  function commitActivity(a,old,activityId) {
+   let f=fAfter();
+   return active() && a.updatedAt == request.time && a.editedBy == request.auth.uid &&
+    a.rev == (old == null ? 1 : old.rev+1) && (old == null || manager() || old.creator == principal()) &&
+    (a.status != 'cancelled' || manager()) && (old == null || old.status != 'cancelled' || manager()) &&
+    a.type in f.types && verifiedProposal(a,old,f);
+  }
+  function budgetActivity(t) {
+   let n=request.resource.data;
+   let m=n.mutation;
+   let path=/databases/$(database)/documents/activities/$(m.activityId);
+   let old=exists(path) ? get(path).data : null;
+   let a=getAfter(path).data;
+   let f=fAfter();
+   let before=charge(old,t);
+   let after=charge(a,t);
+   return active() && n.keys().hasOnly(['budget','used','mutation']) && n.budget == resource.data.budget &&
+    m.uid == request.auth.uid && m.at == request.time && m.activityId == f.mutation.activityId && m.rev == f.mutation.rev && a.rev == m.rev && a.rev == (old == null ? 1 : old.rev+1) &&
+    n.used == resource.data.used-before+after && n.used >= 0 && n.used <= n.budget &&
+    (a.status != 'planned' || a.actual == null || resource.data.used-before+a.actualTotals.get(t,0) <= n.budget);
+  }
+  match /budgets/{teamId} {
+   allow read: if active();
+   allow create: if manager() && request.resource.data.keys().hasOnly(['budget','used','mutation']) && request.resource.data.used == 0 && validMoney(request.resource.data.budget) && fAfter().teams[teamId].budget == request.resource.data.budget;
+   allow update: if (request.resource.data.mutation is map && budgetActivity(teamId)) || (manager() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['budget']) && validMoney(request.resource.data.budget) && request.resource.data.budget >= resource.data.used && fAfter().teams[teamId].budget == request.resource.data.budget);
+  }
+  match /finance/2027 {
+   allow read: if active();
+   allow create: if admin() && request.resource.data.keys().hasOnly(['teams','types','mutation','pausedTeams','rosterEpoch','uploads']) && request.resource.data.teams == {} && request.resource.data.types is list && request.resource.data.mutation == null;
+   allow update: if (request.resource.data.mutation.kind in ['saveActivity','deleteActivity'] && activityFinance()) || metadataFinance() || importFinance() || archiveFinance() || copyFinance() || manualCustomerFinance();
+  }
+  match /activities/{activityId} {
+   // Empty IDs can be checked during creation. Existing data stays protected.
+   allow get: if active() && (resource == null || !teamVisibilityRestricted() || resource.data.teamIds.hasAny([user().teamId]));
+   allow list: if active() && (!teamVisibilityRestricted() || resource.data.teamIds.hasAny([user().teamId]));
+   allow create: if commitActivity(request.resource.data,null,activityId) && receipt(request.resource.data,activityId,null);
+   allow update: if (commitActivity(request.resource.data,resource.data,activityId) ||
+    (active() && request.resource.data.status == 'deleted' && resource.data.status == 'planned' && resource.data.actual == null &&
+      (manager() || resource.data.creator == principal()) && request.resource.data.rev == resource.data.rev+1 && request.resource.data.editedBy == request.auth.uid && request.resource.data.updatedAt == request.time && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','rev','editedBy','updatedAt']))) && receipt(request.resource.data,activityId,resource.data);
+   allow delete: if false;
+  }
+  match /customers/{code} {
+    allow read: if active() && (!teamVisibilityRestricted() || resource.data.visitingTeams.hasAny([user().teamId]));
+    allow create: if (admin() && fAfter().mutation.kind == 'importChunk' &&
+     fAfter().rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1) || manualCustomer(code);
+    allow update: if (admin() && fAfter().mutation.kind == 'importChunk' &&
+     fAfter().rosterEpoch == get(/databases/$(database)/documents/finance/2027).data.get('rosterEpoch',0)+1)
+     || archiveCustomer(code) || copyCustomer(code);
+    allow delete: if false;
+   }
+
+  function teamVisibilityRestricted() {
+   let p=user();
+   let teamId=p.get('teamId','');
+   let path=/databases/$(database)/documents/teamVisibility/$(teamId);
+   return p.role == 'team' && exists(path) && get(path).data.get('showOtherTeams',true) == false;
+  }
+  match /teamVisibility/{teamId} {
+   allow get: if admin() || (active() && user().role == 'team' && user().teamId == teamId);
+   allow list: if admin();
+   allow create,update: if admin() && request.resource.data.keys().hasOnly(['showOtherTeams','updatedBy','updatedAt']) &&
+    request.resource.data.keys().hasAll(['showOtherTeams','updatedBy','updatedAt']) &&
+    request.resource.data.showOtherTeams is bool &&
+    request.resource.data.updatedBy == request.auth.uid &&
+    request.resource.data.updatedAt == request.time &&
+    fAfter().teams.keys().hasAny([teamId]);
+   allow delete: if false;
+  }
+  function standaloneAccess(t) {
+   return admin() || (active() && user().role == 'team' && user().teamId == t);
+  }
+  function standaloneCampaign(c,t) {
+   let f=get(/databases/$(database)/documents/finance/2027).data;
+   let name=f.teams.get(t,{}).get('name','');
+   return (c == 'ent-chest' && name.matches('(?i)(azord|matador)')) ||
+    (c == 'uro' && name.matches('(?i)(uro|matador)')) ||
+     (c == 'pedia' && name.matches('(?i)(azord|clavodar|mixif)'));
+  }
+  function standaloneLimit(c) { return c == 'ent-chest' ? 35 : c == 'uro' ? 25 : c == 'pedia' ? 0 : -1; }
+  function validStandaloneDoctor(c,t,code,encodedCode) {
+   let doctor=get(/databases/$(database)/documents/customers/$(encodedCode)).data;
+   let spec=doctor.get('specialty','');
+   return doctor.code == code && doctor.get('deleted',false) != true &&
+    doctor.visitingTeams.hasAny([t]) &&
+    (c in ['ent-chest','uro'] ||
+     (c == 'pedia' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') &&
+      spec.matches('(?i).*(pedia|paedia|pediatr|paediatr|أطفال|اطفال|طفل).*')));
+  }
+  function quotaAfter(c,t) {
+   return getAfter(/databases/$(database)/documents/standaloneQuotas/$(c + '__' + t)).data;
+  }
+  match /standaloneQuotas/{key} {
+   allow get,list: if active() && (manager() || resource.data.teamId == user().get('teamId','_'));
+   allow create: if admin() && request.resource.data.keys().hasOnly(['campaign','teamId','limit','count']) &&
+    key == request.resource.data.campaign + '__' + request.resource.data.teamId &&
+    standaloneCampaign(request.resource.data.campaign,request.resource.data.teamId) &&
+    request.resource.data.limit == standaloneLimit(request.resource.data.campaign) &&
+    request.resource.data.count == 0;
+   allow update: if standaloneAccess(resource.data.teamId) &&
+    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count','mutation']) &&
+    request.resource.data.campaign == resource.data.campaign &&
+    request.resource.data.teamId == resource.data.teamId &&
+    request.resource.data.limit == resource.data.limit &&
+    request.resource.data.count >= 0 && (resource.data.limit == 0 || request.resource.data.count <= resource.data.limit) &&
+    request.resource.data.mutation.keys().hasOnly(['kind','choiceId','actor','at']) &&
+    request.resource.data.mutation.actor == request.auth.uid &&
+    request.resource.data.mutation.at == request.time &&
+    ((request.resource.data.mutation.kind == 'add' &&
+      request.resource.data.count == resource.data.count + 1 &&
+      !exists(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)) &&
+      existsAfter(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)) &&
+      getAfter(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)).data.teamId == resource.data.teamId &&
+      getAfter(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)).data.campaign == resource.data.campaign) ||
+     (request.resource.data.mutation.kind == 'remove' &&
+      request.resource.data.count == resource.data.count - 1 &&
+      exists(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)) &&
+      get(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)).data.teamId == resource.data.teamId &&
+      get(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)).data.campaign == resource.data.campaign &&
+      !existsAfter(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId))));
+   allow delete: if false;
+  }
+  match /standaloneChoices/{choiceId} {
+   // A transaction must be able to read a *missing* choice before creating it.
+   // Existing choices are readable by their team, admin, and marketing manager.
+   allow get: if active() && (resource == null || manager() || resource.data.teamId == user().get('teamId','_'));
+   allow list: if active() && (manager() || resource.data.teamId == user().get('teamId','_'));
+   allow create: if standaloneAccess(request.resource.data.teamId) &&
+    standaloneCampaign(request.resource.data.campaign,request.resource.data.teamId) &&
+    choiceId == request.resource.data.campaign + '__' + request.resource.data.teamId + '__' + request.resource.data.code &&
+    request.resource.data.keys().hasOnly(['campaign','teamId','code','encodedCode','actor','at']) &&
+    request.resource.data.keys().hasAll(['campaign','teamId','code','encodedCode','actor','at']) &&
+    request.resource.data.actor == request.auth.uid &&
+    request.resource.data.at == request.time &&
+    request.resource.data.encodedCode is string &&
+    request.resource.data.encodedCode.size() > 0 && request.resource.data.encodedCode.size() <= 300 &&
+    validStandaloneDoctor(request.resource.data.campaign,request.resource.data.teamId,request.resource.data.code,request.resource.data.encodedCode) &&
+    quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.kind == 'add' &&
+    quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.choiceId == choiceId &&
+    quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.actor == request.auth.uid &&
+    quotaAfter(request.resource.data.campaign,request.resource.data.teamId).mutation.at == request.time;
+   allow update: if false;
+   allow delete: if standaloneAccess(resource.data.teamId) &&
+    choiceId == resource.data.campaign + '__' + resource.data.teamId + '__' + resource.data.code &&
+    quotaAfter(resource.data.campaign,resource.data.teamId).mutation.kind == 'remove' &&
+    quotaAfter(resource.data.campaign,resource.data.teamId).mutation.choiceId == choiceId &&
+    quotaAfter(resource.data.campaign,resource.data.teamId).mutation.actor == request.auth.uid &&
+    quotaAfter(resource.data.campaign,resource.data.teamId).mutation.at == request.time;
+  }
+
+  match /imports/{id} { allow read,write: if admin(); match /rows/{row} { allow read,write: if admin(); } }
+  match /audit/{id} {
+   allow read: if manager();
+   allow create: if active() && request.resource.data.uid == request.auth.uid && request.resource.data.at == request.time &&
+    ((request.resource.data.kind in ['saveActivity','deleteActivity'] && request.resource.data == fAfter().mutation && id == request.resource.data.activityId + '_' + string(request.resource.data.rev)) ||
+     (manager() && !(request.resource.data.kind in ['saveActivity','deleteActivity'])));
+   allow update,delete: if false;
+  }
+  match /logins/{username} {
+   allow get: if true;
+   allow list: if admin();
+   allow create,update: if admin() && username.matches('[a-z0-9._-]{3,40}') && request.resource.data.keys().hasOnly(['uid','email','accountId']) && request.resource.data.uid is string && request.resource.data.accountId is string && request.resource.data.email is string;
+  }
+  function bootstrap(id) {
+   let n=request.resource.data;
+   return signed() && id == request.auth.uid && !exists(/databases/$(database)/documents/users/$(id)) && (id == 'QrAqmjHZLTWxyEg3SJX11SgBgX33' || (exists(/databases/$(database)/documents/setup/bootstrap) && get(/databases/$(database)/documents/setup/bootstrap).data.adminUid == id)) &&
+    n == {'name':'مسؤول النظام','username':'admin','role':'admin','accountId':id,'teamId':null,'active':true,'current':true};
+  }
+  match /setup/bootstrap { allow get: if signed(); allow write: if false; }
+  match /users/{id} {
+   allow get: if (signed() && request.auth.uid == id) || admin();
+   allow list: if admin();
+   allow create: if bootstrap(id);
+   allow update: if signed() && id == request.auth.uid && resource.data.role == 'manager' && resource.data.active == true && resource.data.get('mustChangePassword',true) != false && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword']) && request.resource.data.mustChangePassword == false;
+   allow create,update: if admin() && request.resource.data.keys().hasOnly(['username','name','role','teamId','accountId','active','current','mustChangePassword']) && request.resource.data.role in ['admin','manager','team'] && (request.resource.data.role != 'manager' || (resource == null ? request.resource.data.mustChangePassword == true : request.resource.data.get('mustChangePassword',true) == resource.data.get('mustChangePassword',true))) && request.resource.data.active is bool && request.resource.data.accountId is string &&
+    (id != request.auth.uid || request.resource.data.active) &&
+    (!request.resource.data.active || request.resource.data.role != 'team' || fAfter().teams[request.resource.data.teamId].accountId == request.resource.data.accountId);
+  }
+  match /accounts/{id} { allow read,write: if admin(); }
+  match /{document=**} { allow read,write: if false; }
+ }
+}
