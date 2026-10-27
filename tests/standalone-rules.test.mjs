@@ -170,3 +170,24 @@ test("standalone doctor IDs containing spaces use the real encoded customer Fire
  assert.equal(selected.encodedCode,encodeURIComponent(code));
  await assertSucceeds(toggle("a","ent-chest","A",code,false));
 });
+
+test(`blank specialty doctors can join standalone within same quota, with no access to other specialties or teams`,async()=>{
+ await bootstrap();
+ await env.withSecurityRulesDisabled(async ctx=>{
+  const d=ctx.firestore();
+  await setDoc(doc(d,`customers/B0`),{...docData(`B0`,``),visitingTeams:[`A`,`U`]});
+  await setDoc(doc(d,`customers/B1`),{...docData(`B1`,`   `),visitingTeams:[`A`]});
+  await setDoc(doc(d,`customers/B2`),{...docData(`B2`,null),visitingTeams:[`A`]});
+  await setDoc(doc(d,`customers/B3`),{...docData(`B3`,`Cardiology`),visitingTeams:[`A`]});
+ });
+ await assertSucceeds(toggle(`a`,`ent-chest`,`A`,`B0`));
+ await assertSucceeds(toggle(`a`,`ent-chest`,`A`,`B1`));
+ await assertSucceeds(toggle(`a`,`ent-chest`,`A`,`B2`));
+ await assertSucceeds(toggle(`u`,`uro`,`U`,`B0`));
+ await assertFails(toggle(`m`,`ent-chest`,`M`,`B0`));
+ await assertFails(toggle(`a`,`ent-chest`,`A`,`B3`));
+ await assertFails(toggle(`a`,`pedia`,`A`,`B0`));
+ assert.equal((await getDoc(quota(db(`a`),`ent-chest__A`))).data().count,3);
+ await assertSucceeds(toggle(`a`,`ent-chest`,`A`,`B0`,false));
+ assert.equal((await getDoc(quota(db(`a`),`ent-chest__A`))).data().count,2);
+});

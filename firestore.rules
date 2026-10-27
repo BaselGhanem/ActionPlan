@@ -356,7 +356,8 @@ service cloud.firestore {
    return doctor.code == code && doctor.get('deleted',false) != true &&
     doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') &&
     doctor.visitingTeams.hasAny([t]) &&
-    ((c == 'ent-chest' && spec.matches('(?i).*(ent|chest|pulmon|thoracic|otorhin|respiratory|اذن|أذن|انف|أنف|صدر).*')) ||
+    ((c in ['ent-chest','uro'] && (spec == null || spec.matches('^\\s*$'))) ||
+     (c == 'ent-chest' && spec.matches('(?i).*(ent|chest|pulmon|thoracic|otorhin|respiratory|اذن|أذن|انف|أنف|صدر).*')) ||
      (c == 'uro' && spec.matches('(?i).*(uro|urolog|مسالك|بولي|بولية).*')) ||
      (c == 'pedia' && spec.matches('(?i).*(pedia|paedia|pediatr|paediatr|أطفال|اطفال|طفل).*')));
   }

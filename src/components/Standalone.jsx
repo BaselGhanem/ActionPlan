@@ -1,8 +1,10 @@
-import React,{useMemo,useState,useEffect} from "react";
+import React,{useMemo,useState,useRef,useLayoutEffect} from "react";
 import {Target,UsersThree,MagnifyingGlass,Check,Plus,ArrowClockwise,ShieldCheck,Link,User} from "@phosphor-icons/react";
 import {visibleStandaloneGroups,matchStandAlone,eligibleDoctor,STANDALONE_CAMPAIGNS,selectionLabelsByCustomer,selectionStatusByCustomer} from "../data/standalone.js";
 
 export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
+ const listRef=useRef(null),savedScroll=useRef(null);
+ const [withoutSpecialty,setWithoutSpecialty]=useState(false);
  const [active,setActive]=useState("");
  const [statusFilter,setStatusFilter]=useState(`all`);
  const [search,setSearch]=useState("");
@@ -11,6 +13,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const groups=useMemo(()=>visibleStandaloneGroups(data.teams,profile).filter(g=>mode==="pedia"?g.id==="pedia":g.id!=="pedia"),[data.teams,profile,mode]);
  const enabled=new Map((data.standalone?.quotas||[]).map(q=>[q.campaign+"__"+q.teamId,q]));
  const choices=data.standalone?.choices||[];
+ useLayoutEffect(()=>{if(savedScroll.current!==null&&listRef.current){listRef.current.scrollTop=savedScroll.current;savedScroll.current=null;}},[choices]);
  const selectionLabels=useMemo(()=>selectionLabelsByCustomer(choices),[choices]);
  const selectedKey=groups.some(g=>g.key===active)?active:groups[0]?.key;
  const current=groups.find(g=>g.key===selectedKey);
@@ -18,7 +21,8 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const selectedCodes=new Set(myChoices.map(c=>c.code));
  const roster=new Set(data.rosters.find(r=>r.teamId===current?.teamId)?.rows.map(c=>c.code)||[]);
  const participants=data.customers.filter(c=>
-  current&&eligibleDoctor(current.id,{...c,visitingTeams:c.visitingTeams||[current.teamId]},current.teamId)&&roster.has(c.code));
+  current&&eligibleDoctor(current.id,{...c,visitingTeams:c.visitingTeams||[current.teamId]},current.teamId)&&roster.has(c.code)&&
+  (mode!==`standalone`|| (withoutSpecialty?!String(c.specialty??``).trim():Boolean(String(c.specialty??``).trim())||selectedCodes.has(c.code))));
  const statuses=useMemo(()=>selectionStatusByCustomer(choices,current?.id,current?.teamId,privileged&&data.standalone?.complete!==false),[choices,current?.id,current?.teamId,privileged,data.standalone?.complete]);
  const canClassify=privileged&&data.standalone?.complete!==false;
  const showMatching=mode===`standalone`;
@@ -26,7 +30,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const uniqueCount=[...statuses.values()].filter(s=>s.status===`unique`).length;
  const listed=participants.filter(c=>(!showMatching||statusFilter===`all`||statuses.get(String(c.code))?.status===statusFilter)&&(!onlySelected||selectedCodes.has(c.code))&&
   (!search.trim()||[c.code,c.name,c.specialty,c.area].join(" ").toLocaleLowerCase().includes(search.toLocaleLowerCase().trim())))
-  .sort((a,b)=>Number(selectedCodes.has(b.code))-Number(selectedCodes.has(a.code))||a.name.localeCompare(b.name,"ar"));
+  .sort((a,b)=>a.name.localeCompare(b.name,`ar`)||String(a.code).localeCompare(String(b.code)));
  const quota=enabled.get(current?.key),count=quota?.count||0;
  const matched=useMemo(()=>matchStandAlone(choices,groups),[choices,groups]);
  return <div className="standalone-page">
@@ -40,7 +44,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
      <div className="standalone-campaign-title"><span className="standalone-campaign-icon"><Target size={17} weight="bold"/></span><b>{c.title}</b></div>
      <small>{c.id===`ent-chest`?`Azord + Matador • 35 لكل فريق`:c.id===`uro`?`URO + Matador • 25 لكل فريق`:`Azord + Clavodar + Mixif • بدون حصة محددة`}</small>
      <div>{groups.filter(g=>g.id===c.id).map(g=>
-      <button type="button" key={g.key} aria-pressed={selectedKey===g.key} className={selectedKey===g.key?"active":""} onClick={()=>{setActive(g.key);setSearch("");setOnlySelected(false);setStatusFilter(`all`)}}>
+      <button type="button" key={g.key} aria-pressed={selectedKey===g.key} className={selectedKey===g.key?"active":""} onClick={()=>{setActive(g.key);setSearch("");setOnlySelected(false);setStatusFilter(`all`);setWithoutSpecialty(false)}}>
        {g.teamName}
        <span>{enabled.get(g.key)?.count||0}{g.quota>0?` / ${g.quota}`:``}</span>
       </button>)}</div>
@@ -53,6 +57,10 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
    </div>
    {current.quota>0&&<div className="standalone-meter"><div style={{width:`${Math.min(100,count/current.quota*100)}%`}}/></div>}
    {!quota&&<p className="standalone-notice" role="status">يلزم تهيئة المسار بواسطة الأدمن قبل بدء اختيار الأطباء</p>}
+   {mode===`standalone`&&profile.role!==`manager`&&<div className="standalone-extra-specialty">
+    <button type="button" className="text-button" aria-pressed={withoutSpecialty} disabled={busy} onClick={()=>{setWithoutSpecialty(v=>!v);setSearch(``);setOnlySelected(false);setStatusFilter(`all`);}}><Plus size={17}/>{withoutSpecialty?`العودة للقائمة الرئيسية`:`اضافة من تخصص آخر`}</button>
+    {withoutSpecialty&&<small role="status">اطباء فريقك الذين لم يحدد لهم تخصص فقط، ضمن حصة المسار الحالية</small>}
+   </div>}
    <div className="standalone-toolbar">
     <label className="search"><MagnifyingGlass size={17}/><input placeholder="ابحث بالاسم أو الكود أو التخصص" value={search} onChange={e=>setSearch(e.target.value)}/></label>
     <label className="check-line"><input type="checkbox" checked={onlySelected} onChange={e=>setOnlySelected(e.target.checked)}/> المختارون فقط ({selectedCodes.size})</label>
@@ -63,7 +71,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
     </div>
     <small>{canClassify?`المطابقة للمختارين ضمن هذا المسار فقط`:privileged?`يلزم نشر قواعد Firestore المحدثة لتفعيل قراءة المطابقة`:`المطابقة متاحة للادمن ومدير التسويق فقط حسب صلاحيات قراءة اختيارات الفرق الحالية`}</small>
    </div>}
-   <div className="standalone-list">{listed.map(c=>{
+   <div className="standalone-list" ref={listRef}>{listed.map(c=>{
     const chosen=selectedCodes.has(c.code);
     const classification=showMatching?statuses.get(String(c.code)):null;
     const otherNames=classification?.otherTeams.map(id=>data.teams.find(t=>t.id===id)?.name||id).join(` + `);
@@ -71,8 +79,8 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
      <div className="standalone-doctor-details"><div className="standalone-doctor-name-line"><b>{c.name}</b>{classification&&<span className={`standalone-status-label ${classification.status}`} title={otherNames?`مختار ايضا لدى ${otherNames}`:`مختار لدى هذا الفريق فقط ضمن المسار`}>
       {classification.status===`matching`?<Link size={13} weight="bold"/>:<User size={13} weight="bold"/>}
       <span dir="ltr">{classification.status===`matching`?`Matching`:`Unique`}</span>{otherNames&&<span className="standalone-matching-team">مع <bdi>{otherNames}</bdi></span>}
-     </span>}{(selectionLabels.get(String(c.code))||[]).map(label=><span key={label} className={`client-selection-label ${label===`Pedia Activity`?`is-pedia`:`is-standalone`}`}>{label}</span>)}</div><small>{c.code} • {c.specialty} • {c.area||"—"}</small></div>
-     <button type="button" disabled={profile.role===`manager`||busy||!quota||(!chosen&&current.quota>0&&count>=current.quota)} onClick={()=>onChoose({campaign:current.id,teamId:current.teamId,code:c.code,selected:!chosen})} className={chosen?"standalone-remove":"standalone-add"}>
+     </span>}{(selectionLabels.get(String(c.code))||[]).map(label=><span key={label} className={`client-selection-label ${label===`Pedia Activity`?`is-pedia`:`is-standalone`}`}>{label}</span>)}</div><small>{c.code} • {c.specialty||`بدون تخصص`} • {c.area||"—"}</small></div>
+     <button type="button" disabled={profile.role===`manager`||busy||!quota||(!chosen&&current.quota>0&&count>=current.quota)} onClick={()=>{savedScroll.current=listRef.current?.scrollTop??null;onChoose({campaign:current.id,teamId:current.teamId,code:c.code,selected:!chosen});}} className={chosen?"standalone-remove":"standalone-add"}>
       {chosen?<><Check size={16}/> مختار</>:<><Plus size={16}/> اختيار</>}
      </button>
     </div>;

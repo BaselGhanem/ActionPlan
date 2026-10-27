@@ -210,19 +210,20 @@ async function chooseStandAlone({campaign,teamId,code,selected}){
  const customerRef=doc(db,`customers/${encodeURIComponent(code)}`);
  const quotaRef=doc(db,`standaloneQuotas/${group.key}`);
  const choiceId=`${group.key}__${code}`,choiceRef=doc(db,`standaloneChoices/${choiceId}`);
- await runTransaction(db,async tx=>{
+ const result=await runTransaction(db,async tx=>{
   const [q,choice,customer]=await Promise.all([tx.get(quotaRef),tx.get(choiceRef),tx.get(customerRef)]);
   fail(q.exists(),"يجب أن يهيئ الأدمن حصص Stand Alone أولا");
   fail(customer.exists()&&customer.data().deleted!==true&&eligibleDoctor(campaign,customer.data(),teamId),"الطبيب غير مدرج بفريقك أو غير مطابق للتخصص");
-  if(selected===choice.exists())return;
+  if(selected===choice.exists())return {selected,count:q.data().count};
   const next=q.data().count+(selected?1:-1);
   fail(next>=0&&(q.data().limit===0||next<=q.data().limit),q.data().limit===0?`عدد الاختيارات غير صالح`:`الحد الأقصى لهذا الفريق: ${q.data().limit} طبيب`);
   const mutation={kind:selected?"add":"remove",choiceId,actor:uid(),at:serverTimestamp()};
   if(selected)tx.set(choiceRef,{campaign,teamId,code,encodedCode:encodeURIComponent(code),actor:uid(),at:serverTimestamp()});
   else tx.delete(choiceRef);
   tx.update(quotaRef,{count:next,mutation});
+  return {selected,count:next};
  });
- return {selected};
+ return result;
 }
 export async function request(op,payload={}){if(op===`load`)return load();if(op===`standaloneInit`)return initializeStandAlone();if(op===`saveTeamVisibility`)return saveTeamVisibility(payload);if(op===`standaloneChoose`)return chooseStandAlone(payload);if(op===`copyCustomer`)return copyCustomerToTeam(payload);if(op===`archiveCustomers`)return archiveCustomers(payload);if(op===`saveActivity`)return saveActivity(payload);if(op===`deleteActivity`)return saveActivity(payload,true);if(op===`saveTeam`)return saveTeam(payload);if(op===`createUser`)return provision(payload);if(op===`updateUser`)return updateUser(payload);
  const p=await profile();

@@ -66,3 +66,15 @@ test(`selection classification isolates campaigns and never guesses from incompl
  assert.equal(selectionStatusByCustomer(choices,`uro`,`M`,false).size,0);
  assert.equal(selectionStatusByCustomer(choices.filter(c=>c.teamId!==`U`),`uro`,`M`,true).get(`007`).status,`unique`);
 });
+
+test(`standalone permits only blank additional specialties on own doctor roster; Pedia stays unchanged`,()=>{
+ for(const specialty of [undefined,null,``,`   `]){
+  const doctor={kind:`طبيب`,specialty,visitingTeams:[`A`]};
+  assert.ok(eligibleDoctor(`ent-chest`,doctor,`A`));
+  assert.ok(eligibleDoctor(`uro`,doctor,`A`));
+  assert.equal(eligibleDoctor(`pedia`,doctor,`A`),false);
+  assert.equal(eligibleDoctor(`uro`,doctor,`M`),false);
+  assert.equal(eligibleDoctor(`uro`,{...doctor,kind:`صيدلية`},`A`),false);
+ }
+ assert.equal(eligibleDoctor(`uro`,{kind:`طبيب`,specialty:`Cardiology`,visitingTeams:[`A`]},`A`),false);
+});

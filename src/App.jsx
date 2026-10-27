@@ -959,7 +959,15 @@ export function App() {
               }}
               onChoose={async item=>{
                 try{setBusy(true);if(isDemo){notify("هذا وضع المعاينة");return;}
-                  await request("standaloneChoose",item);await reload();notify("تم تحديث اختيار الطبيب", "success");
+                  const result=await request(`standaloneChoose`,item);
+                  setData(previous=>{
+                    const current=previous.standalone||{quotas:[],choices:[]};
+                    const matches=c=>c.campaign===item.campaign&&c.teamId===item.teamId&&String(c.code)===String(item.code);
+                    const choices=current.choices.filter(c=>!matches(c));
+                    if(result.selected)choices.push({campaign:item.campaign,teamId:item.teamId,code:item.code});
+                    return {...previous,standalone:{...current,choices,quotas:current.quotas.map(q=>q.campaign===item.campaign&&q.teamId===item.teamId?{...q,count:result.count}:q)}};
+                  });
+                  notify(`تم تحديث اختيار الطبيب`, `success`);
                 }catch(e){
                   notify(e.code==="permission-denied"?"رفض Firebase حفظ الاختيار. تأكد من نشر قواعد Firestore الجديدة، وتخصص الطبيب، وعضويته في الفريق":e.message);
                 }finally{setBusy(false);}
