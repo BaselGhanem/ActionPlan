@@ -10,7 +10,7 @@ const choice=(d,group,code)=>doc(d,"standaloneChoices/"+group+"__"+code);
 const docData=(code,specialty,kind="طبيب")=>({code,name:"طبيب "+code,kind,specialty,area:"عمان",
  visitingTeams:["A","M","U","C","X"],visits:{A:{roster:"rA",classification:"A"},M:{roster:"rM",classification:"B"},U:{roster:"rU",classification:"A"},C:{roster:"rC",classification:"A"},X:{roster:"rX",classification:"A"}}});
 const budget=(name,id)=>({name,budget:1000000,used:0,roster:"r"+id,accountId:id});
-const profile=(id,role,teamId=null)=>({name:id,username:id,role,accountId:id,teamId,active:true,current:true});
+const profile=(id,role,teamId=null)=>({name:id,username:id,role,accountId:id,teamId,active:true,current:true,...(role==="manager"?{mustChangePassword:false}:{})});
 before(async()=>{env=await initializeTestEnvironment({projectId:"demo-standalone-security",
  firestore:{rules:await readFile(new URL("../firestore.rules",import.meta.url),"utf8")}});});
 after(async()=>{await env?.cleanup();});
