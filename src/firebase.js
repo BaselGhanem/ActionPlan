@@ -245,7 +245,7 @@ async function chooseStandAlone({campaign,teamId,code,selected}){
  const result=await runTransaction(db,async tx=>{
   const [q,choice,customer]=await Promise.all([tx.get(quotaRef),tx.get(choiceRef),tx.get(customerRef)]);
   fail(q.exists(),"يجب أن يهيئ الأدمن حصص Stand Alone أولا");
-  fail(customer.exists()&&customer.data().deleted!==true&&eligibleDoctor(campaign,customer.data(),teamId),"الطبيب غير مدرج بفريقك أو غير مطابق للتخصص");
+  fail(!selected||customer.exists()&&customer.data().deleted!==true&&eligibleDoctor(campaign,customer.data(),teamId),"الطبيب غير مدرج بفريقك أو غير مطابق للتخصص");
   if(selected===choice.exists())return {selected,count:q.data().count};
   const next=q.data().count+(selected?1:-1);
   fail(next>=0&&(!selected||q.data().limit===0||next<=Math.min(q.data().limit,group.quota||q.data().limit)),q.data().limit===0?`عدد الاختيارات غير صالح`:`الحد الأقصى لهذا الفريق: ${q.data().limit} طبيب`);
