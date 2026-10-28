@@ -21,7 +21,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const selectedCodes=new Set(myChoices.map(c=>c.code));
  const roster=new Set(data.rosters.find(r=>r.teamId===current?.teamId)?.rows.map(c=>c.code)||[]);
  const participants=data.customers.filter(c=>
-  current&&roster.has(c.code)&&(selectedCodes.has(c.code)||eligibleDoctor(current.id,{...c,visitingTeams:c.visitingTeams||[current.teamId]},current.teamId))&&
+  current&&roster.has(c.code)&&(selectedCodes.has(c.code)||eligibleDoctor(current.id,{...c,visitingTeams:c.visitingTeams||[current.teamId]},current.teamId,current.teamName))&&
   (mode!==`standalone`|| (allSpecialties||specialtyMatches(current.id,c.specialty)||selectedCodes.has(c.code))));
  const statuses=useMemo(()=>selectionStatusByCustomer(choices,current?.id,current?.teamId,privileged&&data.standalone?.complete!==false),[choices,current?.id,current?.teamId,privileged,data.standalone?.complete]);
  const canClassify=privileged&&data.standalone?.complete!==false;
@@ -42,7 +42,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
    {STANDALONE_CAMPAIGNS.filter(c=>groups.some(g=>g.id===c.id)).map(c=>
     <div className={`standalone-campaign ${c.id===`pedia`?`pedia`:``}`} key={c.id}>
      <div className="standalone-campaign-title"><span className="standalone-campaign-icon"><Target size={17} weight="bold"/></span><b>{c.title}</b></div>
-     <small>{c.id===`ent-chest`?`Azord + Matador • ENT 30 لكل فريق`:c.id===`gastro`?`Azord + Matador • Gastroenterology 5 لكل فريق`:c.id===`uro`?`URO + Matador • 25 لكل فريق`:c.id===`advisory`?`Azord + Matador • Advisory Board`:`Azord + Clavodar + Mixif • بدون حصة محددة`}</small>
+     <small>{c.id===`ent-chest`?`Azord + Matador • ENT 30 لكل فريق`:c.id===`gastro`?`Azord + Matador • Gastroenterology 5 لكل فريق`:c.id===`uro`?`URO + Matador • 25 لكل فريق`:c.id===`advisory`?`Azord + Matador + URO • Advisory Board (URO specialty for URO team)`:`Azord + Clavodar + Mixif • بدون حصة محددة`}</small>
      <div>{groups.filter(g=>g.id===c.id).map(g=>
       <button type="button" key={g.key} aria-pressed={selectedKey===g.key} className={selectedKey===g.key?"active":""} onClick={()=>{setActive(g.key);setSearch("");setOnlySelected(false);setStatusFilter(`all`);setAllSpecialties(false)}}>
        {g.teamName}
