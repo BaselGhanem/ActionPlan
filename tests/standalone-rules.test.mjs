@@ -33,6 +33,7 @@ beforeEach(async()=>{
    setDoc(doc(d,"customers/C3"),docData("C3","ENT","صيدلية")),
    setDoc(doc(d,`customers/C4`),docData(`C4`,`Pediatrics`)),
    setDoc(doc(d,`customers/C5`),docData(`C5`,`طب الأطفال`)),
+   setDoc(doc(d,`customers/C6`),docData(`C6`,`Gastroenterology`)),
   ]);
  });
 });
