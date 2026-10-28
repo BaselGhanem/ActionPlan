@@ -36,7 +36,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  return <div className="standalone-page">
   <div className="section-heading">
    <div><h2>{mode==="pedia"?"Pedia Activity":mode==="advisory"?"Advisory Board":"Stand Alone"}</h2><p>مسارات اختيار مستقلة للأطباء، دون تأثير على الأنشطة المالية أو ميزانيات الفرق</p></div>
-   {profile.role==="admin"&&<button className="primary" disabled={busy} onClick={onInit}><ShieldCheck size={17}/> تهيئة مسارات الاختيار</button>}
+   {privileged&&<button className="primary" disabled={busy} onClick={onInit}><ShieldCheck size={17}/> تهيئة مسارات الاختيار</button>}
   </div>
   <div className="standalone-campaign-tabs">
    {STANDALONE_CAMPAIGNS.filter(c=>groups.some(g=>g.id===c.id)).map(c=>
