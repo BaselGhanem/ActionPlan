@@ -150,16 +150,35 @@ test("admin can independently restrict one team; Firestore blocks unrelated cust
  await assertSucceeds(getDoc(doc(azord,"activities/only-m")));
 });
 
-test("admin and marketing manager can read cross-team matching; manager cannot change selections",async()=>{
+test("marketing manager may replace selections across teams; campaign quotas and team ownership remain enforced",async()=>{
  await bootstrap();
  await assertSucceeds(toggle("a","ent-chest","A","C0"));
  await assertSucceeds(getDocs(collection(db("manager"),"standaloneChoices")));
  await assertSucceeds(getDocs(collection(db("manager"),"standaloneQuotas")));
  await assertSucceeds(getDoc(choice(db("manager"),"ent-chest__A","C0")));
- await assertFails(toggle("manager","ent-chest","A","C0",false));
+ await assertSucceeds(toggle("manager","ent-chest","A","C0",false));
+ await assertSucceeds(toggle("manager","ent-chest","M","C0"));
+ await assertSucceeds(toggle("manager","gastro","A","C6"));
+ await assertSucceeds(toggle("manager","pedia","A","C4"));
+ await assertSucceeds(toggle("manager","advisory","M","C2"));
+ await assertFails(toggle("manager","pedia","M","C4"));
+ await assertFails(toggle("manager","gastro","U","C6"));
  await assertFails(setDoc(quota(db("manager"),"ent-chest__M"),{campaign:"ent-chest",teamId:"M",limit:30,count:0}));
  const visible=await assertSucceeds(getDocs(collection(db("admin"),"standaloneChoices")));
- assert.equal(visible.size,1);
+ assert.equal(visible.size,4);
+});
+test("team can remove a selected doctor and choose a replacement within their campaign",async()=>{
+ await bootstrap();
+ await assertSucceeds(toggle("a","ent-chest","A","C0"));
+ await assertSucceeds(toggle("a","ent-chest","A","C0",false));
+ await assertSucceeds(toggle("a","advisory","A","C0"));
+ await assertSucceeds(toggle("a","advisory","A","C0",false));
+ await assertSucceeds(toggle("a","advisory","A","C2"));
+ await assert.equal((await getDoc(quota(db("a"),"advisory__A"))).data().count,1);
+ await assertSucceeds(toggle("a","pedia","A","C4"));
+ await assertSucceeds(toggle("a","pedia","A","C4",false));
+ await assertSucceeds(toggle("a","pedia","A","C5"));
+ await assert.equal((await getDoc(quota(db("a"),"pedia__A"))).data().count,1);
 });
 
 test("standalone doctor IDs containing spaces use the real encoded customer Firestore path",async()=>{
