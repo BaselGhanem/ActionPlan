@@ -429,7 +429,7 @@ service cloud.firestore {
       exists(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)) &&
       get(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)).data.teamId == resource.data.teamId &&
       get(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)).data.campaign == resource.data.campaign &&
-      !existsAfter(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId))));
+      !existsAfter(/databases/$(database)/documents/standaloneChoices/$(request.resource.data.mutation.choiceId)))));
    allow delete: if false;
   }
   match /standaloneChoices/{choiceId} {
