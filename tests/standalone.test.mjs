@@ -8,12 +8,13 @@ test("configured quotas and team permissions",()=>{
  assert.deepEqual(admin.map(g=>[g.id,g.teamName,g.quota]),[
   ["ent-chest","Azord",30],["ent-chest","Matador",30],
   ["gastro","Azord",5],["gastro","Matador",5],
-  ["advisory","Azord",0],["advisory","Matador",0],
+  ["advisory","Azord",0],["advisory","Matador",0],["advisory","URO",0],
   ["uro","Matador",25],["uro","URO",25],
   ["pedia","Azord",0],["pedia","Clavodar",0],["pedia","Mixif",0]
  ]);
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"M"}).map(g=>g.id),["ent-chest","gastro","advisory","uro"]);
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"A"}).map(g=>g.id),["ent-chest","gastro","advisory","pedia"]);
+ assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"U"}).map(g=>g.id),["advisory","uro"]);
 });
 test("ENT and Gastro doctors have separate pools; Advisory Board is for doctors only",()=>{
  for(const s of ["ENT","Otorhinolaryngology","انف واذن"])assert.ok(specialtyMatches("ent-chest",s),s);
@@ -88,4 +89,12 @@ test("ENT and Gastro do not admit unrelated specialties; URO retains existing br
  }
  assert.ok(eligibleDoctor("uro",{kind:"صيدلية",visitingTeams:["A"]},"A"));
  assert.equal(eligibleDoctor("advisory",{kind:"صيدلية",visitingTeams:["A"]},"A"),false);
+});
+
+test("URO Advisory Board restricts its roster to URO specialist doctors",()=>{
+ const c={kind:"طبيب",specialty:"Urology",visitingTeams:["U"]};
+ assert.equal(eligibleDoctor("advisory",c,"U","URO"),true);
+ assert.equal(eligibleDoctor("advisory",{...c,specialty:"ENT"},"U","URO"),false);
+ assert.equal(eligibleDoctor("advisory",{...c,specialty:"ENT"},"U","Azord"),true);
+ assert.equal(eligibleDoctor("advisory",{...c,kind:"صيدلية"},"U","URO"),false);
 });
