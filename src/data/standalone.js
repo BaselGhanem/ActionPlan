@@ -1,6 +1,8 @@
 
 export const STANDALONE_CAMPAIGNS=Object.freeze([
- {id:"ent-chest",title:"ENT + Chest",specialties:["ENT","Chest"],quota:35,teams:["azord","matador"]},
+ {id:"ent-chest",title:"ENT",specialties:["ENT"],quota:30,teams:["azord","matador"]},
+ {id:"gastro",title:"Gastroenterology",specialties:["Gastroenterology"],quota:5,teams:["azord","matador"]},
+ {id:"advisory",title:"Advisory Board",specialties:[],quota:0,teams:["azord","matador"]},
  {id:"uro",title:"URO",specialties:["URO"],quota:25,teams:["uro","matador"]},
  {id:`pedia`,title:`Pedia Activity`,specialties:[`Pediatrics`],quota:0,teams:[`azord`,`clavodar`,`mixif`]},
 ]);
@@ -11,19 +13,21 @@ export const teamForCampaign=(campaign,team)=>Boolean(
 export const specialtyMatches=(campaign,specialty)=>{
  const s=String(specialty||"").trim().toLocaleLowerCase();
  if(!s)return false;
- if(campaign==="ent-chest")return /\bent\b|chest|pulmon|thoracic|otorhin|ear.{0,8}nose|respiratory|اذن|أذن|انف|أنف|صدر/.test(s);
+ if(campaign==="ent-chest")return /\bent\b|otorhin|ear.{0,8}nose|اذن|أذن|انف|أنف/.test(s);
+ if(campaign==="gastro")return /gastro|digestive|هضم/.test(s);
+ if(campaign==="advisory")return true;
  if(campaign==="uro")return /\buro\b|urolog|مسالك|بولي|بولية/.test(s);
  if(campaign===`pedia`)return /pedia|paedia|pediatr|paediatr|أطفال|اطفال|طفل/.test(s);
  return false;
 };
 export const isDoctor=(c)=>["doctor","physician","طبيب","طبيبة","دكتور","دكتورة"].includes(String(c?.kind||"").trim().toLocaleLowerCase());
-export const eligibleDoctor=(campaign,c,teamId)=>Boolean(c.visitingTeams?.includes(teamId)&&([`ent-chest`,`uro`].includes(campaign)||(campaign===`pedia`&&isDoctor(c)&&specialtyMatches(campaign,c.specialty))));
+export const eligibleDoctor=(campaign,c,teamId)=>Boolean(c.visitingTeams?.includes(teamId)&&([`ent-chest`,`gastro`,`uro`].includes(campaign)||(campaign===`advisory`&&isDoctor(c))||(campaign===`pedia`&&isDoctor(c)&&specialtyMatches(campaign,c.specialty))));
 /** Campaign selections are independent from financial activities and deduplicated by customer code. */
 export function selectionLabelsByCustomer(choices=[]){
  const result=new Map();
  for(const choice of choices){
   const code=String(choice?.code??``);
-  const label=choice?.campaign===`pedia`?`Pedia Activity`:STANDALONE_CAMPAIGNS.some(c=>c.id===choice?.campaign)?`Standalone`:null;
+  const label=choice?.campaign===`pedia`?`Pedia Activity`:choice?.campaign===`advisory`?`Advisory Board`:STANDALONE_CAMPAIGNS.some(c=>c.id===choice?.campaign)?`Standalone`:null;
   if(!code||!label)continue;
   const labels=result.get(code)||new Set();labels.add(label);result.set(code,labels);
  }
