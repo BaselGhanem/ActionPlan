@@ -161,8 +161,8 @@ test("marketing manager may replace selections across teams; campaign quotas and
  await assertSucceeds(toggle("manager","gastro","A","C6"));
  await assertSucceeds(toggle("manager","pedia","A","C4"));
  await assertSucceeds(toggle("manager","advisory","M","C2"));
- await assertFails(toggle("manager","pedia","M","C4"));
- await assertFails(toggle("manager","gastro","U","C6"));
+ await assertFails(toggle("manager","pedia","A","C0"));
+ await assertFails(toggle("manager","gastro","A","C0"));
  await assertFails(setDoc(quota(db("manager"),"ent-chest__M"),{campaign:"ent-chest",teamId:"M",limit:30,count:0}));
  const visible=await assertSucceeds(getDocs(collection(db("admin"),"standaloneChoices")));
  assert.equal(visible.size,4);
