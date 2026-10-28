@@ -93,6 +93,19 @@ export const autoMap = (headers) =>
       ),
     ]),
   );
+export function activityExportMetadata(activity, teams = []) {
+  const specialties = [...new Set((activity.clients || [])
+    .map(c => String(c.specialty || "").trim()).filter(Boolean))];
+  const teamNames = [...new Set((activity.teamShares || [])
+    .map(share => share.teamName || teams.find(t => t.id === share.teamId)?.name || share.teamId)
+    .map(name => String(name || "").trim()).filter(Boolean))];
+  const month = String(activity.date || "").match(/^\d{4}-(0[1-9]|1[0-2])(?:-\d{2})?$/)?.[1];
+  return {
+    speciality: specialties.join(" / "),
+    team: teamNames.join(" / "),
+    quarter: month ? `Q${Math.ceil(Number(month) / 3)}` : "",
+  };
+}
 export async function buildWorkbook(data) {
   const { default: ExcelJS } = await import(`exceljs`);
   const wb = new ExcelJS.Workbook();
@@ -136,6 +149,9 @@ export async function buildWorkbook(data) {
         `المخطط USD`,
         `الفعلي USD`,
         `الملاحظات`,
+        `Speciality`,
+        `Team`,
+        `Quarter`,
       ],
       data.activities.map((a) => [
         a.id,
@@ -145,6 +161,9 @@ export async function buildWorkbook(data) {
         a.total / 100,
         a.actual === null ? null : a.actual / 100,
         a.notes,
+        activityExportMetadata(a, data.teams).speciality,
+        activityExportMetadata(a, data.teams).team,
+        activityExportMetadata(a, data.teams).quarter,
       ]),
     ],
     [
