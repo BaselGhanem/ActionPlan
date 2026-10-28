@@ -218,7 +218,7 @@ async function saveTeamVisibility({teamId,showOtherTeams}){
  return {};
 }
 async function initializeStandAlone(){
- const p=await profile();admin(p);
+ const p=await profile();manager(p);
  const f=(await getDoc(financeRef)).data(),teams=Object.entries(f.teams).map(([id,t])=>({id,...t}));
  const configs=visibleStandaloneGroups(teams,p);
  fail(configs.length>0,`أضف الفرق المؤهلة لمسارات Standalone أو Pedia Activity أولا`);
