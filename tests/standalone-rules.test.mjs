@@ -38,7 +38,7 @@ beforeEach(async()=>{
 });
 const bootstrap=async()=>{
  const d=db("admin");
- for(const [campaign,t,limit] of [["ent-chest","A",35],["ent-chest","M",35],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
+ for(const [campaign,t,limit] of [["ent-chest","A",30],["ent-chest","M",30],["gastro","A",5],["gastro","M",5],["advisory","A",0],["advisory","M",0],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
   await assertSucceeds(setDoc(quota(d,campaign+"__"+t),{campaign,teamId:t,limit,count:0}));
 };
 async function toggle(identity,campaign,teamId,code,selected=true){
@@ -56,13 +56,13 @@ async function toggle(identity,campaign,teamId,code,selected=true){
  });
 }
 test("only admin can initialize a quota, no other team can list or fetch another team's choices",async()=>{
- await assertFails(setDoc(quota(db("a"),"ent-chest__A"),{campaign:"ent-chest",teamId:"A",limit:35,count:0}));
+ await assertFails(setDoc(quota(db("a"),"ent-chest__A"),{campaign:"ent-chest",teamId:"A",limit:30,count:0}));
  await bootstrap();
- assert.equal((await getDoc(quota(db("a"),"ent-chest__A"))).data().limit,35);
+ assert.equal((await getDoc(quota(db("a"),"ent-chest__A"))).data().limit,30);
  await assertFails(getDoc(quota(db("a"),"ent-chest__M")));
  await assertFails(getDocs(collection(db("a"),"standaloneQuotas")));
  const own=await assertSucceeds(getDocs(query(collection(db("a"),"standaloneQuotas"),where("teamId","==","A"))));
- assert.equal(own.docs.length,2);
+ assert.equal(own.docs.length,4);
 });
 test("Azord and Matador can select same ENT doctor without exposing each other's selections",async()=>{
  await bootstrap();
@@ -79,10 +79,15 @@ test("Azord and Matador can select same ENT doctor without exposing each other's
  await assertSucceeds(toggle("a","ent-chest","A","C0",false));
  assert.equal((await getDoc(quota(db("a"),"ent-chest__A"))).data().count,0);
 });
-test("all specialties and kinds allowed; team, quota, direct writes remain guarded",async()=>{
+test("ENT and Gastro choices enforce specialties, team access and quotas",async()=>{
  await bootstrap();
- await assertSucceeds(toggle("a","ent-chest","A","C2"));
- await assertSucceeds(toggle("a","ent-chest","A","C3"));
+ await assertFails(toggle("a","ent-chest","A","C2"));
+ await assertFails(toggle("a","ent-chest","A","C3"));
+ await assertFails(toggle("a","ent-chest","A","C1"));
+ await assertSucceeds(toggle("a","gastro","A","C6"));
+ await assertFails(toggle("a","gastro","A","C0"));
+ await assertSucceeds(toggle("a","advisory","A","C0"));
+ await assertFails(toggle("a","advisory","A","C3"));
  await assertFails(toggle("a","ent-chest","M","C0"));
  await assertFails(toggle("u","ent-chest","U","C0"));
  await assertSucceeds(toggle("u","uro","U","C2"));
@@ -151,7 +156,7 @@ test("admin and marketing manager can read cross-team matching; manager cannot c
  await assertSucceeds(getDocs(collection(db("manager"),"standaloneQuotas")));
  await assertSucceeds(getDoc(choice(db("manager"),"ent-chest__A","C0")));
  await assertFails(toggle("manager","ent-chest","A","C0",false));
- await assertFails(setDoc(quota(db("manager"),"ent-chest__M"),{campaign:"ent-chest",teamId:"M",limit:35,count:0}));
+ await assertFails(setDoc(quota(db("manager"),"ent-chest__M"),{campaign:"ent-chest",teamId:"M",limit:30,count:0}));
  const visible=await assertSucceeds(getDocs(collection(db("admin"),"standaloneChoices")));
  assert.equal(visible.size,1);
 });
@@ -171,7 +176,7 @@ test("standalone doctor IDs containing spaces use the real encoded customer Fire
  await assertSucceeds(toggle("a","ent-chest","A",code,false));
 });
 
-test(`all own roster specialties can join standalone within same quota, with no access to other teams`,async()=>{
+test(`ENT and Gastro are specialty-restricted while URO supports other own-roster specialties`,async()=>{
  await bootstrap();
  await env.withSecurityRulesDisabled(async ctx=>{
   const d=ctx.firestore();
@@ -180,14 +185,14 @@ test(`all own roster specialties can join standalone within same quota, with no 
   await setDoc(doc(d,`customers/B2`),{...docData(`B2`,null),visitingTeams:[`A`]});
   await setDoc(doc(d,`customers/B3`),{...docData(`B3`,`Cardiology`),visitingTeams:[`A`]});
  });
- await assertSucceeds(toggle(`a`,`ent-chest`,`A`,`B0`));
- await assertSucceeds(toggle(`a`,`ent-chest`,`A`,`B1`));
- await assertSucceeds(toggle(`a`,`ent-chest`,`A`,`B2`));
+ await assertFails(toggle(`a`,`ent-chest`,`A`,`B0`));
+ await assertFails(toggle(`a`,`ent-chest`,`A`,`B1`));
+ await assertFails(toggle(`a`,`ent-chest`,`A`,`B2`));
  await assertSucceeds(toggle(`u`,`uro`,`U`,`B0`));
  await assertFails(toggle(`m`,`ent-chest`,`M`,`B0`));
- await assertSucceeds(toggle(`a`,`ent-chest`,`A`,`B3`));
+ await assertFails(toggle(`a`,`ent-chest`,`A`,`B3`));
+ await assertSucceeds(toggle(`a`,`advisory`,`A`,`B3`));
  await assertFails(toggle(`a`,`pedia`,`A`,`B0`));
- assert.equal((await getDoc(quota(db(`a`),`ent-chest__A`))).data().count,4);
- await assertSucceeds(toggle(`a`,`ent-chest`,`A`,`B0`,false));
- assert.equal((await getDoc(quota(db(`a`),`ent-chest__A`))).data().count,3);
+ assert.equal((await getDoc(quota(db(`a`),`ent-chest__A`))).data().count,0);
+ assert.equal((await getDoc(quota(db(`a`),`advisory__A`))).data().count,1);
 });
