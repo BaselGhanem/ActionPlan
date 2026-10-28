@@ -382,7 +382,8 @@ service cloud.firestore {
   function standaloneCampaign(c,t) {
    let f=get(/databases/$(database)/documents/finance/2027).data;
    let name=f.teams.get(t,{}).get('name','');
-   return (c in ['ent-chest','gastro','advisory'] && name.matches('(?i)(azord|matador)')) ||
+   return (c in ['ent-chest','gastro'] && name.matches('(?i)(azord|matador)')) ||
+    (c == 'advisory' && name.matches('(?i)(azord|matador|uro)')) ||
     (c == 'uro' && name.matches('(?i)(uro|matador)')) ||
      (c == 'pedia' && name.matches('(?i)(azord|clavodar|mixif)'));
   }
@@ -395,7 +396,8 @@ service cloud.firestore {
     (c == 'uro' ||
      (c == 'ent-chest' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') && spec.matches('(?i).*(ent|otorhin|ear.{0,8}nose|اذن|أذن|انف|أنف).*')) ||
      (c == 'gastro' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') && spec.matches('(?i).*(gastro|digestive|هضم).*')) ||
-     (c == 'advisory' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)')) ||
+     (c == 'advisory' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') &&
+      (!get(/databases/$(database)/documents/finance/2027).data.teams[t].name.matches('(?i)uro') || spec.matches('(?i).*(uro|urolog|مسالك|بولي|بولية).*'))) ||
      (c == 'pedia' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') &&
       spec.matches('(?i).*(pedia|paedia|pediatr|paediatr|أطفال|اطفال|طفل).*')));
   }
@@ -404,12 +406,12 @@ service cloud.firestore {
   }
   match /standaloneQuotas/{key} {
    allow get,list: if active() && (manager() || resource.data.teamId == user().get('teamId','_'));
-   allow create: if admin() && request.resource.data.keys().hasOnly(['campaign','teamId','limit','count']) &&
+   allow create: if manager() && request.resource.data.keys().hasOnly(['campaign','teamId','limit','count']) &&
     key == request.resource.data.campaign + '__' + request.resource.data.teamId &&
     standaloneCampaign(request.resource.data.campaign,request.resource.data.teamId) &&
     request.resource.data.limit == standaloneLimit(request.resource.data.campaign) &&
     request.resource.data.count == 0;
-   allow update: if (admin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['limit']) && request.resource.data.limit == standaloneLimit(resource.data.campaign) && resource.data.count <= request.resource.data.limit) || (standaloneAccess(resource.data.teamId) &&
+   allow update: if (manager() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['limit']) && request.resource.data.limit == standaloneLimit(resource.data.campaign) && resource.data.count <= request.resource.data.limit) || (standaloneAccess(resource.data.teamId) &&
     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count','mutation']) &&
     request.resource.data.campaign == resource.data.campaign &&
     request.resource.data.teamId == resource.data.teamId &&
