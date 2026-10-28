@@ -10,7 +10,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const [search,setSearch]=useState("");
  const [onlySelected,setOnlySelected]=useState(false);
  const profile=data.profile,privileged=[`admin`,`manager`].includes(profile.role);
- const groups=useMemo(()=>visibleStandaloneGroups(data.teams,profile).filter(g=>mode==="pedia"?g.id==="pedia":g.id!=="pedia"),[data.teams,profile,mode]);
+ const groups=useMemo(()=>visibleStandaloneGroups(data.teams,profile).filter(g=>mode==="pedia"?g.id==="pedia":mode==="advisory"?g.id==="advisory":g.id!=="pedia"&&g.id!=="advisory"),[data.teams,profile,mode]);
  const enabled=new Map((data.standalone?.quotas||[]).map(q=>[q.campaign+"__"+q.teamId,q]));
  const choices=data.standalone?.choices||[];
  useLayoutEffect(()=>{if(savedScroll.current!==null&&listRef.current){listRef.current.scrollTop=savedScroll.current;savedScroll.current=null;}},[choices]);
@@ -35,14 +35,14 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const matched=useMemo(()=>matchStandAlone(choices,groups),[choices,groups]);
  return <div className="standalone-page">
   <div className="section-heading">
-   <div><h2>{mode==="pedia"?"Pedia Activity":"Stand Alone"}</h2><p>مسارات اختيار مستقلة للأطباء، دون تأثير على الأنشطة المالية أو ميزانيات الفرق</p></div>
+   <div><h2>{mode==="pedia"?"Pedia Activity":mode==="advisory"?"Advisory Board":"Stand Alone"}</h2><p>مسارات اختيار مستقلة للأطباء، دون تأثير على الأنشطة المالية أو ميزانيات الفرق</p></div>
    {profile.role==="admin"&&<button className="primary" disabled={busy} onClick={onInit}><ShieldCheck size={17}/> تهيئة مسارات الاختيار</button>}
   </div>
   <div className="standalone-campaign-tabs">
    {STANDALONE_CAMPAIGNS.filter(c=>groups.some(g=>g.id===c.id)).map(c=>
     <div className={`standalone-campaign ${c.id===`pedia`?`pedia`:``}`} key={c.id}>
      <div className="standalone-campaign-title"><span className="standalone-campaign-icon"><Target size={17} weight="bold"/></span><b>{c.title}</b></div>
-     <small>{c.id===`ent-chest`?`Azord + Matador • 35 لكل فريق`:c.id===`uro`?`URO + Matador • 25 لكل فريق`:`Azord + Clavodar + Mixif • بدون حصة محددة`}</small>
+     <small>{c.id===`ent-chest`?`Azord + Matador • ENT 30 لكل فريق`:c.id===`gastro`?`Azord + Matador • Gastroenterology 5 لكل فريق`:c.id===`uro`?`URO + Matador • 25 لكل فريق`:c.id===`advisory`?`Azord + Matador • Advisory Board`:`Azord + Clavodar + Mixif • بدون حصة محددة`}</small>
      <div>{groups.filter(g=>g.id===c.id).map(g=>
       <button type="button" key={g.key} aria-pressed={selectedKey===g.key} className={selectedKey===g.key?"active":""} onClick={()=>{setActive(g.key);setSearch("");setOnlySelected(false);setStatusFilter(`all`);setAllSpecialties(false)}}>
        {g.teamName}
