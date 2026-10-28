@@ -39,7 +39,7 @@ beforeEach(async()=>{
 });
 const bootstrap=async()=>{
  const d=db("admin");
- for(const [campaign,t,limit] of [["ent-chest","A",30],["ent-chest","M",30],["gastro","A",5],["gastro","M",5],["advisory","A",0],["advisory","M",0],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
+ for(const [campaign,t,limit] of [["ent-chest","A",30],["ent-chest","M",30],["gastro","A",5],["gastro","M",5],["advisory","A",0],["advisory","M",0],["advisory","U",0],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
   await assertSucceeds(setDoc(quota(d,campaign+"__"+t),{campaign,teamId:t,limit,count:0}));
 };
 async function toggle(identity,campaign,teamId,code,selected=true){
@@ -215,4 +215,19 @@ test(`ENT and Gastro are specialty-restricted while URO supports other own-roste
  await assertFails(toggle(`a`,`pedia`,`A`,`B0`));
  assert.equal((await getDoc(quota(db(`a`),`ent-chest__A`))).data().count,0);
  assert.equal((await getDoc(quota(db(`a`),`advisory__A`))).data().count,1);
+});
+
+test("URO Advisory Board is accessible to URO team and manager but restricts specialties",async()=>{
+ await bootstrap();
+ await assertSucceeds(toggle("u","advisory","U","C2"));
+ await assertSucceeds(toggle("manager","advisory","U","C2",false));
+ await assertFails(toggle("u","advisory","U","C0"));
+ await assertFails(toggle("u","advisory","U","C3"));
+ await assertSucceeds(toggle("manager","advisory","U","C2"));
+ await assertFails(toggle("a","advisory","U","C2",false));
+});
+test("marketing manager initializes campaign quotas but cannot edit global settings",async()=>{
+ const d=db("manager");
+ await assertSucceeds(setDoc(quota(d,"advisory__U"),{campaign:"advisory",teamId:"U",limit:0,count:0}));
+ await assertFails(setDoc(doc(d,"users/another"),profile("another","team","U")));
 });
