@@ -377,7 +377,7 @@ service cloud.firestore {
    allow delete: if false;
   }
   function standaloneAccess(t) {
-   return admin() || (active() && user().role == 'team' && user().teamId == t);
+   return admin() || (active() && (user().role == 'manager' || (user().role == 'team' && user().teamId == t)));
   }
   function standaloneCampaign(c,t) {
    let f=get(/databases/$(database)/documents/finance/2027).data;
