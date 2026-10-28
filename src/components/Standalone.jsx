@@ -21,7 +21,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
  const selectedCodes=new Set(myChoices.map(c=>c.code));
  const roster=new Set(data.rosters.find(r=>r.teamId===current?.teamId)?.rows.map(c=>c.code)||[]);
  const participants=data.customers.filter(c=>
-  current&&eligibleDoctor(current.id,{...c,visitingTeams:c.visitingTeams||[current.teamId]},current.teamId)&&roster.has(c.code)&&
+  current&&roster.has(c.code)&&(selectedCodes.has(c.code)||eligibleDoctor(current.id,{...c,visitingTeams:c.visitingTeams||[current.teamId]},current.teamId))&&
   (mode!==`standalone`|| (allSpecialties||specialtyMatches(current.id,c.specialty)||selectedCodes.has(c.code))));
  const statuses=useMemo(()=>selectionStatusByCustomer(choices,current?.id,current?.teamId,privileged&&data.standalone?.complete!==false),[choices,current?.id,current?.teamId,privileged,data.standalone?.complete]);
  const canClassify=privileged&&data.standalone?.complete!==false;
@@ -57,7 +57,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
    </div>
    {current.quota>0&&<div className="standalone-meter"><div style={{width:`${Math.min(100,count/current.quota*100)}%`}}/></div>}
    {!quota&&<p className="standalone-notice" role="status">يلزم تهيئة المسار بواسطة الأدمن قبل بدء اختيار الأطباء</p>}
-   {mode===`standalone`&&profile.role!==`manager`&&<div className="standalone-extra-specialty">
+   {mode===`standalone`&&<div className="standalone-extra-specialty">
     <button type="button" className="text-button" aria-pressed={allSpecialties} disabled={busy} onClick={()=>{setAllSpecialties(v=>!v);setSearch(``);setOnlySelected(false);setStatusFilter(`all`);}}><Plus size={17}/>{allSpecialties?`العودة للقائمة الرئيسية`:`اضافة من تخصص آخر`}</button>
     {allSpecialties&&<small role="status">كل عملاء فريقك بجميع التخصصات، ضمن حصة المسار الحالية</small>}
    </div>}
@@ -80,8 +80,8 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
       {classification.status===`matching`?<Link size={13} weight="bold"/>:<User size={13} weight="bold"/>}
       <span dir="ltr">{classification.status===`matching`?`Matching`:`Unique`}</span>{otherNames&&<span className="standalone-matching-team">مع <bdi>{otherNames}</bdi></span>}
      </span>}{(selectionLabels.get(String(c.code))||[]).map(label=><span key={label} className={`client-selection-label ${label===`Pedia Activity`?`is-pedia`:`is-standalone`}`}>{label}</span>)}</div><small>{c.code} • {c.specialty||`بدون تخصص`} • {c.area||"—"}</small></div>
-     <button type="button" disabled={profile.role===`manager`||busy||!quota||(!chosen&&current.quota>0&&count>=current.quota)} onClick={()=>{savedScroll.current=listRef.current?.scrollTop??null;onChoose({campaign:current.id,teamId:current.teamId,code:c.code,selected:!chosen});}} className={chosen?"standalone-remove":"standalone-add"}>
-      {chosen?<><Check size={16}/> مختار</>:<><Plus size={16}/> اختيار</>}
+     <button type="button" disabled={busy||!quota||(!chosen&&current.quota>0&&count>=current.quota)} onClick={()=>{savedScroll.current=listRef.current?.scrollTop??null;onChoose({campaign:current.id,teamId:current.teamId,code:c.code,selected:!chosen});}} className={chosen?"standalone-remove":"standalone-add"}>
+      {chosen?<><Check size={16}/> إزالة الاختيار</>:<><Plus size={16}/> اختيار</>}
      </button>
     </div>;
    })}
