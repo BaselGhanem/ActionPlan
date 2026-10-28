@@ -227,6 +227,7 @@ async function initializeStandAlone(){
   await runTransaction(db,async tx=>{
    const old=await tx.get(ref);
    if(!old.exists())tx.set(ref,{campaign:g.id,teamId:g.teamId,limit:g.quota,count:0});
+   else if(old.data().limit!==g.quota&&old.data().count<=g.quota)tx.update(ref,{limit:g.quota});
   });
  }
  return {groups:configs.length};
@@ -247,7 +248,7 @@ async function chooseStandAlone({campaign,teamId,code,selected}){
   fail(customer.exists()&&customer.data().deleted!==true&&eligibleDoctor(campaign,customer.data(),teamId),"الطبيب غير مدرج بفريقك أو غير مطابق للتخصص");
   if(selected===choice.exists())return {selected,count:q.data().count};
   const next=q.data().count+(selected?1:-1);
-  fail(next>=0&&(q.data().limit===0||next<=q.data().limit),q.data().limit===0?`عدد الاختيارات غير صالح`:`الحد الأقصى لهذا الفريق: ${q.data().limit} طبيب`);
+  fail(next>=0&&(q.data().limit===0||next<=Math.min(q.data().limit,group.quota||q.data().limit)),q.data().limit===0?`عدد الاختيارات غير صالح`:`الحد الأقصى لهذا الفريق: ${q.data().limit} طبيب`);
   const mutation={kind:selected?"add":"remove",choiceId,actor:uid(),at:serverTimestamp()};
   if(selected)tx.set(choiceRef,{campaign,teamId,code,encodedCode:encodeURIComponent(code),actor:uid(),at:serverTimestamp()});
   else tx.delete(choiceRef);
