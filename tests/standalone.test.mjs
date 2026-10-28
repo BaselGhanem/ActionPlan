@@ -4,23 +4,32 @@ import {eligibleDoctor,visibleStandaloneGroups,matchStandAlone,specialtyMatches,
 test("configured quotas and team permissions",()=>{
  const teams=[{id:"A",name:"Azord"},{id:"M",name:"Matador"},{id:"U",name:"URO"},{id:"C",name:"Clavodar"},{id:"X",name:"Mixif"}];
  const admin=visibleStandaloneGroups(teams,{role:"admin"});
- assert.deepEqual(visibleStandaloneGroups(teams,{role:`manager`}),admin);
- assert.deepEqual(admin.map(g=>[g.id,g.teamName,g.quota]),[["ent-chest","Azord",35],["ent-chest","Matador",35],["uro","Matador",25],["uro","URO",25],["pedia","Azord",0],["pedia","Clavodar",0],["pedia","Mixif",0]]);
- assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"M"}).map(g=>g.id),["ent-chest","uro"]);
- assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"A"}).map(g=>g.id),["ent-chest","pedia"]);
+ assert.deepEqual(visibleStandaloneGroups(teams,{role:"manager"}),admin);
+ assert.deepEqual(admin.map(g=>[g.id,g.teamName,g.quota]),[
+  ["ent-chest","Azord",30],["ent-chest","Matador",30],
+  ["gastro","Azord",5],["gastro","Matador",5],
+  ["advisory","Azord",0],["advisory","Matador",0],
+  ["uro","Matador",25],["uro","URO",25],
+  ["pedia","Azord",0],["pedia","Clavodar",0],["pedia","Mixif",0]
+ ]);
+ assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"M"}).map(g=>g.id),["ent-chest","gastro","advisory","uro"]);
+ assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"A"}).map(g=>g.id),["ent-chest","gastro","advisory","pedia"]);
 });
-test("eligibility requires own roster and Pedia alone requires a specialist doctor",()=>{
- for(const s of ["ENT","Chest speciality","Pulmonology","انف واذن","أمراض الصدر"])assert.ok(specialtyMatches("ent-chest",s),s);
- for(const s of ["URO","Urology","المسالك البولية"])assert.ok(specialtyMatches("uro",s),s);
+test("ENT and Gastro doctors have separate pools; Advisory Board is for doctors only",()=>{
+ for(const s of ["ENT","Otorhinolaryngology","انف واذن"])assert.ok(specialtyMatches("ent-chest",s),s);
+ for(const s of ["Chest speciality","Pulmonology","أمراض الصدر"])assert.equal(specialtyMatches("ent-chest",s),false,s);
+ for(const s of ["Gastroenterology","Digestive System","جهاز هضمي"])assert.ok(specialtyMatches("gastro",s),s);
  const doctor={kind:"طبيب",specialty:"ENT",visitingTeams:["A","M"]};
  assert.ok(eligibleDoctor("ent-chest",doctor,"A"));
- assert.ok(eligibleDoctor("ent-chest",doctor,"M"));
+ assert.ok(eligibleDoctor("advisory",doctor,"M"));
  assert.equal(eligibleDoctor("ent-chest",doctor,"U"),false);
+ assert.equal(eligibleDoctor("gastro",doctor,"A"),false);
+ assert.ok(eligibleDoctor("gastro",{...doctor,specialty:"Gastroenterology"},"A"));
+ assert.equal(eligibleDoctor("ent-chest",{...doctor,kind:"صيدلية"},"A"),false);
+ assert.equal(eligibleDoctor("advisory",{...doctor,kind:"صيدلية"},"A"),false);
  assert.equal(eligibleDoctor("uro",doctor,"A"),true);
- assert.equal(eligibleDoctor("ent-chest",{...doctor,kind:"صيدلية"},"A"),true);
- for(const specialty of [`Pedia`,`Pediatrics`,`Paediatrics`,`طب الأطفال`,`اطفال`])assert.ok(specialtyMatches(`pedia`,specialty),specialty);
- assert.equal(eligibleDoctor(`pedia`,{...doctor,specialty:`Pediatric`},`A`),true);
- assert.equal(eligibleDoctor(`pedia`,doctor,`A`),false);
+ assert.ok(eligibleDoctor("pedia",{...doctor,specialty:"Pediatrics"},"A"));
+ assert.equal(eligibleDoctor("pedia",doctor,"A"),false);
 });
 test("matching deduplicates doctors by code in each campaign",()=>{
  const teams=[{id:"A",name:"Azord"},{id:"M",name:"Matador"},{id:"U",name:"URO"},{id:"C",name:"Clavodar"},{id:"X",name:"Mixif"}];
@@ -39,11 +48,11 @@ test("matching deduplicates doctors by code in each campaign",()=>{
  assert.equal(match[0].unique,2);
  assert.equal(match[0].matches.length,1);
  assert.deepEqual(match[0].byTeam.map(g=>g.count),[1,2]);
- assert.equal(match[1].unique,1);
- assert.equal(match[1].matches.length,1);
- assert.equal(match[2].unique,2);
- assert.equal(match[2].matches.length,1);
- assert.deepEqual(match[2].byTeam.map(g=>g.count),[1,1,1]);
+ assert.equal(match.find(x=>x.id==="uro").unique,1);
+ assert.equal(match.find(x=>x.id==="uro").matches.length,1);
+ assert.equal(match.find(x=>x.id==="pedia").unique,2);
+ assert.equal(match.find(x=>x.id==="pedia").matches.length,1);
+ assert.deepEqual(match.find(x=>x.id==="pedia").byTeam.map(g=>g.count),[1,1,1]);
 });
 test(`selection badges deduplicate teams and keep Pedia separate from Standalone`,()=>{
  const badges=selectionLabelsByCustomer([
@@ -67,14 +76,16 @@ test(`selection classification isolates campaigns and never guesses from incompl
  assert.equal(selectionStatusByCustomer(choices.filter(c=>c.teamId!==`U`),`uro`,`M`,true).get(`007`).status,`unique`);
 });
 
-test(`standalone permits all own roster specialties and kinds; Pedia stays unchanged`,()=>{
- for(const specialty of [undefined,null,``,`   `]){
-  const doctor={kind:`طبيب`,specialty,visitingTeams:[`A`]};
-  assert.ok(eligibleDoctor(`ent-chest`,doctor,`A`));
-  assert.ok(eligibleDoctor(`uro`,doctor,`A`));
-  assert.equal(eligibleDoctor(`pedia`,doctor,`A`),false);
-  assert.equal(eligibleDoctor(`uro`,doctor,`M`),false);
-  assert.equal(eligibleDoctor(`uro`,{...doctor,kind:`صيدلية`},`A`),true);
+test("ENT and Gastro do not admit unrelated specialties; URO retains existing broad roster eligibility",()=>{
+ for(const specialty of [undefined,null,"","   ","Cardiology"]){
+  const doctor={kind:"طبيب",specialty,visitingTeams:["A"]};
+  assert.equal(eligibleDoctor("ent-chest",doctor,"A"),false);
+  assert.equal(eligibleDoctor("gastro",doctor,"A"),false);
+  assert.ok(eligibleDoctor("uro",doctor,"A"));
+  assert.equal(eligibleDoctor("pedia",doctor,"A"),false);
+  assert.equal(eligibleDoctor("uro",doctor,"M"),false);
+  assert.ok(eligibleDoctor("advisory",doctor,"A"));
  }
- assert.equal(eligibleDoctor(`uro`,{kind:`طبيب`,specialty:`Cardiology`,visitingTeams:[`A`]},`A`),true);
+ assert.ok(eligibleDoctor("uro",{kind:"صيدلية",visitingTeams:["A"]},"A"));
+ assert.equal(eligibleDoctor("advisory",{kind:"صيدلية",visitingTeams:["A"]},"A"),false);
 });
