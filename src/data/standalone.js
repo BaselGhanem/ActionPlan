@@ -2,7 +2,7 @@
 export const STANDALONE_CAMPAIGNS=Object.freeze([
  {id:"ent-chest",title:"ENT",specialties:["ENT"],quota:30,teams:["azord","matador"]},
  {id:"gastro",title:"Gastroenterology",specialties:["Gastroenterology"],quota:5,teams:["azord","matador"]},
- {id:"advisory",title:"Advisory Board",specialties:[],quota:0,teams:["azord","matador"]},
+ {id:"advisory",title:"Advisory Board",specialties:[],quota:0,teams:["azord","matador","uro"]},
  {id:"uro",title:"URO",specialties:["URO"],quota:25,teams:["uro","matador"]},
  {id:`pedia`,title:`Pedia Activity`,specialties:[`Pediatrics`],quota:0,teams:[`azord`,`clavodar`,`mixif`]},
 ]);
@@ -21,7 +21,7 @@ export const specialtyMatches=(campaign,specialty)=>{
  return false;
 };
 export const isDoctor=(c)=>["doctor","physician","طبيب","طبيبة","دكتور","دكتورة"].includes(String(c?.kind||"").trim().toLocaleLowerCase());
-export const eligibleDoctor=(campaign,c,teamId)=>Boolean(c.visitingTeams?.includes(teamId)&&([`ent-chest`,`gastro`].includes(campaign)?isDoctor(c)&&specialtyMatches(campaign,c.specialty):campaign===`uro`||(campaign===`advisory`&&isDoctor(c))||(campaign===`pedia`&&isDoctor(c)&&specialtyMatches(campaign,c.specialty))));
+export const eligibleDoctor=(campaign,c,teamId,teamName="")=>Boolean(c.visitingTeams?.includes(teamId)&&([`ent-chest`,`gastro`].includes(campaign)?isDoctor(c)&&specialtyMatches(campaign,c.specialty):campaign===`uro`||(campaign===`advisory`&&isDoctor(c)&&(normalizeTeamName(teamName)!=="uro"||specialtyMatches("uro",c.specialty)))||(campaign===`pedia`&&isDoctor(c)&&specialtyMatches(campaign,c.specialty))));
 /** Campaign selections are independent from financial activities and deduplicated by customer code. */
 export function selectionLabelsByCustomer(choices=[]){
  const result=new Map();
