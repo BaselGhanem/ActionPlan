@@ -427,7 +427,9 @@ export function App() {
   },[data?.visibilityHidden,data?.teams]);
   const directoryPageSize=50;
   const manager = data && [`admin`, `manager`].includes(data.profile.role);
-  const allowed = routes.filter((r) => (r.id !== `admin` || manager) && (r.id !== `pedia` || data?.profile.role !== `manager`));
+  const advisoryTeam = data?.teams.find(t=>t.id===data?.profile.teamId);
+  const canViewAdvisory = manager || [`azord`,`matador`].includes(String(advisoryTeam?.name||``).trim().toLowerCase());
+  const allowed = routes.filter((r) => (r.id !== `admin` || manager) && (r.id !== `pedia` || data?.profile.role !== `manager`) && (r.id !== `advisory` || canViewAdvisory));
   const activityCounts = useMemo(
     () => activityCountsByCustomer(data?.activities || []),
     [data?.activities],
