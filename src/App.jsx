@@ -82,6 +82,7 @@ const routes = [
   { id: `activities`, title: `الأنشطة`, icon: CalendarBlank },
   { id: `standalone`, title: `Stand Alone`, icon: Target },
   { id: `pedia`, title: `Pedia Activity`, icon: Stethoscope },
+  { id: `advisory`, title: `Advisory Board`, icon: UsersThree },
   { id: `actuals`, title: `الفعلي والمتابعة`, icon: CheckCircle },
   { id: `incoming`, title: `مصاريف الفرق الواردة`, icon: UsersThree },
   { id: `reports`, title: `التقارير`, icon: ChartBar },
@@ -630,8 +631,7 @@ export function App() {
   }
   function openActivity(activity){setDraft(toTeamDraft(activity));}
   const canEditActivity=activity=>Boolean(
-    manager || (activity.creator===(data?.profile.accountId||user?.uid) &&
-      (!data.visibilityHidden || activity.teamIds?.length===1))
+    manager || activity.creator===(data?.profile.accountId||user?.uid)
   );
   async function exportExcel() {
     setBusy(true);
@@ -692,8 +692,7 @@ export function App() {
     );
   const oldDraft = data.activities.find((a) => a.id === draft?.id),
     canEdit = draft && (manager || !draft.id ||
-      (draft.creator === (data.profile.accountId || user.uid) &&
-       (!data.visibilityHidden || oldDraft?.teamIds?.length===1)));
+      draft.creator === (data.profile.accountId || user.uid));
   return (
     <div className="app">
       <aside className={`sidebar ${nav ? `mobile-open` : ``}`}>
@@ -1021,7 +1020,7 @@ export function App() {
           {page === `activities` && (
             <Activities data={data} onOpen={openActivity} activityCounts={activityCounts} customerKinds={customerKinds} selectionLabels={selectionLabels} />
           )}
-          {(page === `standalone` || page === `pedia`) && (
+          {(page === `standalone` || page === `pedia` || page === `advisory`) && (
             <Standalone key={page} mode={page} data={data} busy={busy}
               onInit={async()=>{
                 try{setBusy(true);if(isDemo){notify("هذا وضع المعاينة", "success");return;}
