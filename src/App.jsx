@@ -429,8 +429,8 @@ export function App() {
   const directoryPageSize=50;
   const manager = data && [`admin`, `manager`].includes(data.profile.role);
   const advisoryTeam = data?.teams.find(t=>t.id===data?.profile.teamId);
-  const canViewAdvisory = manager || [`azord`,`matador`].includes(String(advisoryTeam?.name||``).trim().toLowerCase());
-  const allowed = routes.filter((r) => (r.id !== `admin` || manager) && (r.id !== `pedia` || data?.profile.role !== `manager`) && (r.id !== `advisory` || canViewAdvisory));
+  const canViewAdvisory = manager || [`azord`,`matador`,`uro`].includes(String(advisoryTeam?.name||``).trim().toLowerCase());
+  const allowed = routes.filter((r) => (r.id !== `admin` || data?.profile.role===`admin`) && (r.id !== `advisory` || canViewAdvisory));
   const activityCounts = useMemo(
     () => activityCountsByCustomer(data?.activities || []),
     [data?.activities],
