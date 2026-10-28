@@ -392,7 +392,9 @@ service cloud.firestore {
    let spec=doctor.get('specialty','');
    return doctor.code == code && doctor.get('deleted',false) != true &&
     doctor.visitingTeams.hasAny([t]) &&
-    (c in ['ent-chest','gastro','uro'] ||
+    (c == 'uro' ||
+     (c == 'ent-chest' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') && spec.matches('(?i).*(ent|otorhin|ear.{0,8}nose|اذن|أذن|انف|أنف).*')) ||
+     (c == 'gastro' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') && spec.matches('(?i).*(gastro|digestive|هضم).*')) ||
      (c == 'advisory' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)')) ||
      (c == 'pedia' && doctor.get('kind','').matches('(?i)(doctor|physician|طبيب|طبيبة|دكتور|دكتورة)') &&
       spec.matches('(?i).*(pedia|paedia|pediatr|paediatr|أطفال|اطفال|طفل).*')));
@@ -412,7 +414,7 @@ service cloud.firestore {
     request.resource.data.campaign == resource.data.campaign &&
     request.resource.data.teamId == resource.data.teamId &&
     request.resource.data.limit == resource.data.limit &&
-    request.resource.data.count >= 0 && (resource.data.limit == 0 || request.resource.data.count <= resource.data.limit) && (resource.data.campaign != 'ent-chest' || request.resource.data.count <= 30) &&
+    request.resource.data.count >= 0 && (resource.data.limit == 0 || request.resource.data.count <= resource.data.limit) && (resource.data.campaign != 'ent-chest' || request.resource.data.mutation.kind != 'add' || request.resource.data.count <= 30) &&
     request.resource.data.mutation.keys().hasOnly(['kind','choiceId','actor','at']) &&
     request.resource.data.mutation.actor == request.auth.uid &&
     request.resource.data.mutation.at == request.time &&
