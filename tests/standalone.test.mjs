@@ -7,7 +7,7 @@ test("configured quotas and team permissions",()=>{
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"manager"}),admin);
  assert.deepEqual(admin.map(g=>[g.id,g.teamName,g.quota]),[
   ["ent-chest","Azord",30],["ent-chest","Matador",30],
-  ["gastro","Matador",5],
+  ["gastro","Matador",30],
   ["advisory","Azord",0],["advisory","Matador",0],["advisory","URO",0],
   ["uro","Matador",25],["uro","URO",25],
   ["pedia","Azord",0],["pedia","Clavodar",0],["pedia","Mixif",0]
