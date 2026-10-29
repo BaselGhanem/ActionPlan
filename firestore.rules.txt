@@ -388,7 +388,7 @@ service cloud.firestore {
     (c == 'uro' && name.matches('(?i)(uro|matador)')) ||
      (c == 'pedia' && name.matches('(?i)(azord|clavodar|mixif)'));
   }
-  function standaloneLimit(c) { return c == 'ent-chest' ? 30 : c == 'gastro' ? 5 : c == 'uro' ? 25 : c == 'pedia' || c == 'advisory' ? 0 : -1; }
+  function standaloneLimit(c) { return c == 'ent-chest' ? 30 : c == 'gastro' ? 30 : c == 'uro' ? 25 : c == 'pedia' || c == 'advisory' ? 0 : -1; }
   function validStandaloneDoctor(c,t,code,encodedCode) {
    let doctor=get(/databases/$(database)/documents/customers/$(encodedCode)).data;
    let spec=doctor.get('specialty','');
