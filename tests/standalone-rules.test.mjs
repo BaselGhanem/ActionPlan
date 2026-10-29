@@ -39,7 +39,7 @@ beforeEach(async()=>{
 });
 const bootstrap=async()=>{
  const d=db("admin");
- for(const [campaign,t,limit] of [["ent-chest","A",30],["ent-chest","M",30],["gastro","A",5],["gastro","M",5],["advisory","A",0],["advisory","M",0],["advisory","U",0],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
+ for(const [campaign,t,limit] of [["ent-chest","A",30],["ent-chest","M",30],["gastro","M",5],["advisory","A",0],["advisory","M",0],["advisory","U",0],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
   await assertSucceeds(setDoc(quota(d,campaign+"__"+t),{campaign,teamId:t,limit,count:0}));
 };
 async function toggle(identity,campaign,teamId,code,selected=true){
@@ -80,13 +80,15 @@ test("Azord and Matador can select same ENT doctor without exposing each other's
  await assertSucceeds(toggle("a","ent-chest","A","C0",false));
  assert.equal((await getDoc(quota(db("a"),"ent-chest__A"))).data().count,0);
 });
-test("ENT and Gastro choices enforce specialties, team access and quotas",async()=>{
+test("ENT and Matador-only Gastro choices enforce doctor identity, team access and quotas",async()=>{
  await bootstrap();
  await assertFails(toggle("a","ent-chest","A","C2"));
  await assertFails(toggle("a","ent-chest","A","C3"));
  await assertFails(toggle("a","ent-chest","A","C1"));
- await assertSucceeds(toggle("a","gastro","A","C6"));
- await assertFails(toggle("a","gastro","A","C0"));
+ await assertSucceeds(toggle("m","gastro","M","C6"));
+  await assertSucceeds(toggle("m","gastro","M","C0"));
+  await assertFails(toggle("a","gastro","A","C6"));
+ await assertFails(toggle("m","gastro","M","C3"));
  await assertSucceeds(toggle("a","advisory","A","C0"));
  await assertFails(toggle("a","advisory","A","C3"));
  await assertFails(toggle("a","ent-chest","M","C0"));
@@ -158,7 +160,7 @@ test("marketing manager may replace selections across teams; campaign quotas and
  await assertSucceeds(getDoc(choice(db("manager"),"ent-chest__A","C0")));
  await assertSucceeds(toggle("manager","ent-chest","A","C0",false));
  await assertSucceeds(toggle("manager","ent-chest","M","C0"));
- await assertSucceeds(toggle("manager","gastro","A","C6"));
+ await assertSucceeds(toggle("manager","gastro","M","C6"));
  await assertSucceeds(toggle("manager","pedia","A","C4"));
  await assertSucceeds(toggle("manager","advisory","M","C2"));
  await assertFails(toggle("manager","pedia","A","C0"));
@@ -196,7 +198,7 @@ test("standalone doctor IDs containing spaces use the real encoded customer Fire
  await assertSucceeds(toggle("a","ent-chest","A",code,false));
 });
 
-test(`ENT and Gastro are specialty-restricted while URO supports other own-roster specialties`,async()=>{
+test(`ENT is specialty-restricted while Gastro accepts any Matador doctor and URO supports other own-roster specialties`,async()=>{
  await bootstrap();
  await env.withSecurityRulesDisabled(async ctx=>{
   const d=ctx.firestore();
