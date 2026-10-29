@@ -1,7 +1,7 @@
 
 export const STANDALONE_CAMPAIGNS=Object.freeze([
  {id:"ent-chest",title:"ENT",specialties:["ENT"],quota:30,teams:["azord","matador"]},
- {id:"gastro",title:"Gastroenterology",specialties:["Gastroenterology"],quota:5,teams:["matador"]},
+ {id:"gastro",title:"Gastroenterology",specialties:["Gastroenterology"],quota:30,teams:["matador"]},
  {id:"advisory",title:"Advisory Board",specialties:[],quota:0,teams:["azord","matador","uro"]},
  {id:"uro",title:"URO",specialties:["URO"],quota:25,teams:["uro","matador"]},
  {id:`pedia`,title:`Pedia Activity`,specialties:[`Pediatrics`],quota:0,teams:[`azord`,`clavodar`,`mixif`]},
