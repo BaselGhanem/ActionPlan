@@ -39,7 +39,7 @@ beforeEach(async()=>{
 });
 const bootstrap=async()=>{
  const d=db("admin");
- for(const [campaign,t,limit] of [["ent-chest","A",30],["ent-chest","M",30],["gastro","M",5],["advisory","A",0],["advisory","M",0],["advisory","U",0],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
+ for(const [campaign,t,limit] of [["ent-chest","A",30],["ent-chest","M",30],["gastro","M",30],["advisory","A",0],["advisory","M",0],["advisory","U",0],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
   await assertSucceeds(setDoc(quota(d,campaign+"__"+t),{campaign,teamId:t,limit,count:0}));
 };
 async function toggle(identity,campaign,teamId,code,selected=true){
