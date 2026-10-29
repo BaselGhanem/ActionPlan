@@ -44,7 +44,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
    {STANDALONE_CAMPAIGNS.filter(c=>groups.some(g=>g.id===c.id)).map(c=>
     <div className={`standalone-campaign ${c.id===`pedia`?`pedia`:``}`} key={c.id}>
      <div className="standalone-campaign-title"><span className="standalone-campaign-icon"><Target size={17} weight="bold"/></span><b>{c.title}</b></div>
-     <small>{c.id===`ent-chest`?`Azord + Matador • ENT 30 لكل فريق`:c.id===`gastro`?`Matador فقط • 5 اختيارات من جميع تخصصات أطباء الفريق`:c.id===`uro`?`URO + Matador • 25 لكل فريق`:c.id===`advisory`?`Azord + Matador + URO • Advisory Board (URO specialty for URO team)`:`Azord + Clavodar + Mixif • بدون حصة محددة`}</small>
+     <small>{c.id===`ent-chest`?`Azord + Matador • ENT 30 لكل فريق`:c.id===`gastro`?`Matador فقط • 30 اختيارا من جميع تخصصات أطباء الفريق`:c.id===`uro`?`URO + Matador • 25 لكل فريق`:c.id===`advisory`?`Azord + Matador + URO • Advisory Board (URO specialty for URO team)`:`Azord + Clavodar + Mixif • بدون حصة محددة`}</small>
      <div>{groups.filter(g=>g.id===c.id).map(g=>
       <button type="button" key={g.key} aria-pressed={selectedKey===g.key} className={selectedKey===g.key?"active":""} onClick={()=>{setActive(g.key);setSearch("");setOnlySelected(false);setStatusFilter(`all`);setAllSpecialties(false);setSpecialtyFilter(`all`)}}>
        {g.teamName}
