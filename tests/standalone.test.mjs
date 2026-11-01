@@ -99,9 +99,9 @@ test("URO Advisory Board restricts its roster to URO specialist doctors",()=>{
  assert.equal(eligibleDoctor("advisory",{...c,kind:"صيدلية"},"U","URO"),false);
 });
 
-test("Gastro is Matador-only and allows doctors from all specialties",()=>{
+test("Gastro supports both teams with 35 doctors from all specialties",()=>{
  const teams=[{id:"A",name:"Azord"},{id:"M",name:"Matador"}];
- assert.deepEqual(visibleStandaloneGroups(teams,{role:"admin"}).filter(g=>g.id==="gastro").map(g=>g.teamId),["M"]);
+ assert.deepEqual(visibleStandaloneGroups(teams,{role:"admin"}).filter(g=>g.id==="gastro").map(g=>g.teamId),["A","M"]);
  for(const specialty of ["ENT","Cardiology","Gastroenterology",""])
   assert.equal(eligibleDoctor("gastro",{kind:"طبيب",specialty,visitingTeams:["M"]},"M"),true);
  assert.equal(eligibleDoctor("gastro",{kind:"صيدلية",visitingTeams:["M"]},"M"),false);
