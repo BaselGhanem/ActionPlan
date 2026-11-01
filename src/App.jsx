@@ -64,6 +64,7 @@ import {
 } from "./data/domain";
 import { columns, downloadWorkbook } from "./files";
 import { azharReportRows, downloadAzharReport } from "./data/azhar-report.js";
+import { masterReportRows, downloadMasterReport } from "./data/master-report.js";
 import { downloadRosterTemplate, readRosterTemplate } from "./roster-template";
 import { observeUILanguage } from "./ui-preferences.js";
 const money = (n) =>
@@ -1463,8 +1464,11 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds , sele
     ])), [quarterRows,filters]);
   const rows = matchingRows(quarterRows, filters, reportKeys);
   const azharRows=azharReportRows(rows,data.teams);
+  const masterRows=masterReportRows(rows,data.teams,data.customers);
   const [azharBusy,setAzharBusy]=useState(false);
+  const [masterBusy,setMasterBusy]=useState(false);
   async function exportAzhar(){setAzharBusy(true);try{await downloadAzharReport(azharRows);}catch(e){window.alert(`Azhar Report: ${e.message}`);}finally{setAzharBusy(false);}}
+  async function exportMaster(){setMasterBusy(true);try{await downloadMasterReport(masterRows);}catch(e){window.alert(`Master Report: ${e.message}`);}finally{setMasterBusy(false);}}
   const teamLabels = new Map(data.teams.map(team=>[team.id,team.name]));
   const months = Object.fromEntries([
     ...Array.from({length:12},(_,i)=>[
@@ -1553,6 +1557,7 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds , sele
           [`months`, `حسب الشهر`],
           [`types`, `حسب نوع النشاط`],
           [`azhar`, `Azhar Report`],
+          [`master`, `Master Report`],
         ].map(([k, v]) => (
           <button
             key={k}
@@ -1608,7 +1613,10 @@ function Reports({ data, exportExcel, busy, activityCounts, customerKinds , sele
       {view===`azhar`&&<section className="surface">
         <div className="section-heading"><div><h3>Azhar Report</h3><p>Team × Activity × Specialty × Quarter · Planned USD · Current filters</p></div><button type="button" className="primary" disabled={azharBusy||busy} onClick={exportAzhar}><FileXls size={18}/> {azharBusy?`جار تجهيز الملف…`:`Export Azhar Report`}</button></div>
         <div className="table-wrap"><table><thead><tr>{[`Team`,`Activity`,`Description`,`Country`,`Specialty`,`Date`,`Location`,`Number (Units / Customers)`,`Total Cost`].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{azharRows.map((r,i)=><tr key={i}><td>{r.team}</td><td>{r.activity}</td><td>{r.description||`—`}</td><td>{r.country}</td><td>{r.specialty}</td><td>{r.quarter}</td><td>{r.location||`—`}</td><td className="numeric">{r.number}</td><td className="numeric">{r.totalCost.toLocaleString(`en-US`,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>)}</tbody><tfoot><tr><td>Grand Total</td><td colSpan={6}></td><td className="numeric">{azharRows.reduce((n,r)=>n+r.number,0)}</td><td className="numeric">{azharRows.reduce((n,r)=>n+r.totalCost,0).toLocaleString(`en-US`,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr></tfoot></table></div>{!azharRows.length&&<Empty text="لا توجد بيانات ضمن الفلاتر"/>}</section>}
-      {view!==`azhar`&&<section className="surface">
+      {view===`master`&&<section className="surface">
+        <div className="section-heading"><div><h3>Master Report</h3><p>One activity/team per row · Participant names in Description · Planned USD · Current filters</p></div><button type="button" className="primary" disabled={masterBusy||busy} onClick={exportMaster}><FileXls size={18}/> {masterBusy?`جار تجهيز الملف…`:`Export Master Report`}</button></div>
+        <div className="table-wrap"><table><thead><tr>{[`Team`,`Activity`,`Description`,`Country`,`Specialty`,`Date`,`Location`,`Number (Units / Customers)`,`Total Cost`].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{masterRows.map((r,i)=><tr key={i}><td>{r.team}</td><td>{r.activity}</td><td>{r.description||`—`}</td><td>{r.country}</td><td>{r.specialty}</td><td>{r.quarter}</td><td>{r.location||`—`}</td><td className="numeric">{r.number}</td><td className="numeric">{r.totalCost.toLocaleString(`en-US`,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>)}</tbody><tfoot><tr><td>Grand Total</td><td colSpan={6}></td><td className="numeric">{masterRows.reduce((n,r)=>n+r.number,0)}</td><td className="numeric">{masterRows.reduce((n,r)=>n+r.totalCost,0).toLocaleString(`en-US`,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr></tfoot></table></div>{!masterRows.length&&<Empty text="لا توجد بيانات ضمن الفلاتر"/>}</section>}
+      {view!==`azhar`&&view!==`master`&&<section className="surface">
         <div className="table-wrap">
           <table>
             <thead>
