@@ -48,16 +48,17 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
      <div>{groups.filter(g=>g.id===c.id).map(g=>
       <button type="button" key={g.key} aria-pressed={selectedKey===g.key} className={selectedKey===g.key?"active":""} onClick={()=>{setActive(g.key);setSearch("");setOnlySelected(false);setStatusFilter(`all`);setAllSpecialties(false);setSpecialtyFilter(`all`)}}>
        {g.teamName}
-       <span>{enabled.get(g.key)?.count||0}{g.quota>0?` / ${g.quota}`:``}</span>
+       <span>{enabled.get(g.key)?.count||0}{g.quota>0?` / ${enabled.get(g.key)?.limit??g.quota}`:``}</span>
       </button>)}</div>
     </div>)}
   </div>
   {current?<section className="surface standalone-selector">
    <div className="standalone-selected-title">
     <div><h3>{current.title} — {current.teamName}</h3><p>{current.quota>0?`المستهدف ${current.quota} طبيبا لهذا الفريق بشكل مستقل`:`اختيار أطباء الأطفال لهذا الفريق بدون عدد مستهدف محدد`}</p></div>
-    <strong className="standalone-quota">{count}{current.quota>0&&<small> / {current.quota}</small>}</strong>
+    <strong className="standalone-quota">{count}{current.quota>0&&<small> / {quota?.limit??current.quota}</small>}</strong>
    </div>
-   {current.quota>0&&<div className="standalone-meter"><div style={{width:`${Math.min(100,count/current.quota*100)}%`}}/></div>}
+   {current.quota>0&&<div className="standalone-meter"><div style={{width:`${Math.min(100,count/(quota?.limit||current.quota)*100)}%`}}/></div>}
+   {quota&&quota.limit!==current.quota&&<p className="standalone-notice" role="status">الحصة المحفوظة في Firebase هي {quota.limit} والمستهدف الجديد {current.quota} — اضغط تهيئة مسارات الاختيار بعد نشر قواعد Firebase الجديدة لتحديث الحصة دون حذف اختيارات الاطباء</p>}
    {!quota&&<p className="standalone-notice" role="status">يلزم تهيئة المسار بواسطة الأدمن قبل بدء اختيار الأطباء</p>}
    {mode===`standalone`&&current.id!==`gastro`&&<div className="standalone-extra-specialty">
     <button type="button" className="text-button" aria-pressed={allSpecialties} disabled={busy} onClick={()=>{setAllSpecialties(v=>!v);setSearch(``);setOnlySelected(false);setStatusFilter(`all`);}}><Plus size={17}/>{allSpecialties?`العودة للقائمة الرئيسية`:`اضافة من تخصص آخر`}</button>
@@ -83,7 +84,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
       {classification.status===`matching`?<Link size={13} weight="bold"/>:<User size={13} weight="bold"/>}
       <span dir="ltr">{classification.status===`matching`?`Matching`:`Unique`}</span>{otherNames&&<span className="standalone-matching-team">مع <bdi>{otherNames}</bdi></span>}
      </span>}{(selectionLabels.get(String(c.code))||[]).map(label=><span key={label} className={`client-selection-label ${label===`Pedia Activity`?`is-pedia`:`is-standalone`}`}>{label}</span>)}</div><small>{c.code} • {c.specialty||`بدون تخصص`} • {c.area||"—"}</small></div>
-     <button type="button" disabled={busy||!quota||(!chosen&&current.quota>0&&count>=current.quota)} onClick={()=>{savedScroll.current=listRef.current?.scrollTop??null;onChoose({campaign:current.id,teamId:current.teamId,code:c.code,selected:!chosen});}} className={chosen?"standalone-remove":"standalone-add"}>
+     <button type="button" disabled={busy||!quota||(!chosen&&current.quota>0&&count>=Math.min(current.quota,quota?.limit??current.quota))} onClick={()=>{savedScroll.current=listRef.current?.scrollTop??null;onChoose({campaign:current.id,teamId:current.teamId,code:c.code,selected:!chosen});}} className={chosen?"standalone-remove":"standalone-add"}>
       {chosen?<><Check size={16}/> إزالة الاختيار</>:<><Plus size={16}/> اختيار</>}
      </button>
     </div>;
