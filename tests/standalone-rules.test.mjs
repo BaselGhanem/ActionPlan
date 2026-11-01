@@ -80,14 +80,14 @@ test("Azord and Matador can select same ENT doctor without exposing each other's
  await assertSucceeds(toggle("a","ent-chest","A","C0",false));
  assert.equal((await getDoc(quota(db("a"),"ent-chest__A"))).data().count,0);
 });
-test("ENT and Matador-only Gastro choices enforce doctor identity, team access and quotas",async()=>{
+test("ENT and both-team Gastro choices enforce doctor identity, team access and quotas",async()=>{
  await bootstrap();
  await assertFails(toggle("a","ent-chest","A","C2"));
  await assertFails(toggle("a","ent-chest","A","C3"));
  await assertFails(toggle("a","ent-chest","A","C1"));
  await assertSucceeds(toggle("m","gastro","M","C6"));
   await assertSucceeds(toggle("m","gastro","M","C0"));
-  await assertFails(toggle("a","gastro","A","C6"));
+  await assertSucceeds(toggle("a","gastro","A","C6"));
  await assertFails(toggle("m","gastro","M","C3"));
  await assertSucceeds(toggle("a","advisory","A","C0"));
  await assertFails(toggle("a","advisory","A","C3"));
@@ -164,10 +164,10 @@ test("marketing manager may replace selections across teams; campaign quotas and
  await assertSucceeds(toggle("manager","pedia","A","C4"));
  await assertSucceeds(toggle("manager","advisory","M","C2"));
  await assertFails(toggle("manager","pedia","A","C0"));
- await assertFails(toggle("manager","gastro","A","C0"));
+ await assertSucceeds(toggle("manager","gastro","A","C0"));
  await assertFails(setDoc(quota(db("manager"),"ent-chest__M"),{campaign:"ent-chest",teamId:"M",limit:30,count:0}));
  const visible=await assertSucceeds(getDocs(collection(db("admin"),"standaloneChoices")));
- assert.equal(visible.size,4);
+ assert.equal(visible.size,5);
 });
 test("team can remove a selected doctor and choose a replacement within their campaign",async()=>{
  await bootstrap();
