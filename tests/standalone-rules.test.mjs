@@ -39,7 +39,7 @@ beforeEach(async()=>{
 });
 const bootstrap=async()=>{
  const d=db("admin");
- for(const [campaign,t,limit] of [["ent-chest","A",30],["ent-chest","M",30],["gastro","A",35],["gastro","M",35],["advisory","A",0],["advisory","M",0],["advisory","U",0],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
+ for(const [campaign,t,limit] of [["ent-chest","A",30],["ent-chest","C",30],["ent-chest","M",30],["gastro","A",35],["gastro","C",35],["gastro","M",35],["advisory","A",0],["advisory","C",0],["advisory","M",0],["advisory","U",0],["uro","M",25],["uro","U",25],[`pedia`,`A`,0],[`pedia`,`C`,0],[`pedia`,`X`,0]])
   await assertSucceeds(setDoc(quota(d,campaign+"__"+t),{campaign,teamId:t,limit,count:0}));
 };
 async function toggle(identity,campaign,teamId,code,selected=true){
@@ -117,6 +117,27 @@ test(`Pedia Activity enforces exactly Azord, Clavodar and Mixif, with independen
  assert.equal(all.size,3);
  await assertSucceeds(toggle(`c`,`pedia`,`C`,`C4`,false));
  assert.equal((await getDoc(quota(db(`c`),`pedia__C`))).data().count,0);
+});
+
+test(`Clavodar gains every Azord campaign while keeping Pedia and team isolation`,async()=>{
+ await bootstrap();
+ const own=await assertSucceeds(getDocs(query(collection(db(`c`),`standaloneQuotas`),where(`teamId`,`==`,`C`))));
+ assert.deepEqual(own.docs.map(d=>d.data().campaign).sort(),[`advisory`,`ent-chest`,`gastro`,`pedia`]);
+ await assertSucceeds(toggle(`c`,`ent-chest`,`C`,`C0`));
+ await assertSucceeds(toggle(`a`,`ent-chest`,`A`,`C0`));
+ await assertFails(toggle(`c`,`ent-chest`,`C`,`C2`));
+ await assertSucceeds(toggle(`c`,`gastro`,`C`,`C6`));
+ await assertSucceeds(toggle(`c`,`gastro`,`C`,`C0`));
+ await assertFails(toggle(`c`,`gastro`,`C`,`C3`));
+ await assertSucceeds(toggle(`c`,`advisory`,`C`,`C2`));
+ await assertFails(toggle(`c`,`advisory`,`C`,`C3`));
+ await assertSucceeds(toggle(`c`,`pedia`,`C`,`C4`));
+ await assertFails(toggle(`c`,`pedia`,`C`,`C0`));
+ await assertFails(setDoc(quota(db(`admin`),`uro__C`),{campaign:`uro`,teamId:`C`,limit:25,count:0}));
+ await assertFails(getDoc(choice(db(`c`),`ent-chest__A`,`C0`)));
+ assert.equal((await getDoc(quota(db(`c`),`pedia__C`))).data().count,1);
+ await assertSucceeds(toggle(`c`,`ent-chest`,`C`,`C0`,false));
+ assert.equal((await getDoc(quota(db(`a`),`ent-chest__A`))).data().count,1);
 });
 
 test("admin can independently restrict one team; Firestore blocks unrelated customers and activities",async()=>{
