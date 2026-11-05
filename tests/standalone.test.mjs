@@ -6,14 +6,15 @@ test("configured quotas and team permissions",()=>{
  const admin=visibleStandaloneGroups(teams,{role:"admin"});
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"manager"}),admin);
  assert.deepEqual(admin.map(g=>[g.id,g.teamName,g.quota]),[
-  ["ent-chest","Azord",30],["ent-chest","Matador",30],
-  ["gastro","Azord",35],["gastro","Matador",35],
-  ["advisory","Azord",0],["advisory","Matador",0],["advisory","URO",0],
+  ["ent-chest","Azord",30],["ent-chest","Clavodar",30],["ent-chest","Matador",30],
+  ["gastro","Azord",35],["gastro","Clavodar",35],["gastro","Matador",35],
+  ["advisory","Azord",0],["advisory","Clavodar",0],["advisory","Matador",0],["advisory","URO",0],
   ["uro","Matador",25],["uro","URO",25],
   ["pedia","Azord",0],["pedia","Clavodar",0],["pedia","Mixif",0]
  ]);
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"M"}).map(g=>g.id),["ent-chest","gastro","advisory","uro"]);
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"A"}).map(g=>g.id),["ent-chest","gastro","advisory","pedia"]);
+ assert.deepEqual(visibleStandaloneGroups(teams,{role:`team`,teamId:`C`}).map(g=>g.id),[`ent-chest`,`gastro`,`advisory`,`pedia`]);
  assert.deepEqual(visibleStandaloneGroups(teams,{role:"team",teamId:"U"}).map(g=>g.id),["advisory","uro"]);
 });
 test("ENT and Gastro doctors have separate pools; Advisory Board is for doctors only",()=>{
