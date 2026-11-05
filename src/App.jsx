@@ -430,7 +430,7 @@ export function App() {
   const directoryPageSize=50;
   const manager = data && [`admin`, `manager`].includes(data.profile.role);
   const advisoryTeam = data?.teams.find(t=>t.id===data?.profile.teamId);
-  const canViewAdvisory = manager || [`azord`,`matador`,`uro`].includes(String(advisoryTeam?.name||``).trim().toLowerCase());
+  const canViewAdvisory = manager || [`azord`,`clavodar`,`matador`,`uro`].includes(String(advisoryTeam?.name||``).trim().toLowerCase());
   const allowed = routes.filter((r) => (r.id !== `admin` || data?.profile.role===`admin`) && (r.id !== `advisory` || canViewAdvisory));
   const activityCounts = useMemo(
     () => activityCountsByCustomer(data?.activities || []),
