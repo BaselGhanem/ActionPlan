@@ -44,7 +44,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
    {STANDALONE_CAMPAIGNS.filter(c=>groups.some(g=>g.id===c.id)).map(c=>
     <div className={`standalone-campaign ${c.id===`pedia`?`pedia`:``}`} key={c.id}>
      <div className="standalone-campaign-title"><span className="standalone-campaign-icon"><Target size={17} weight="bold"/></span><b>{c.title}</b></div>
-     <small>{c.id===`ent-chest`?`Azord + Matador • ENT 30 لكل فريق`:c.id===`gastro`?`Azord + Matador • 35 طبيبا لكل فريق من جميع التخصصات`:c.id===`uro`?`URO + Matador • 25 لكل فريق`:c.id===`advisory`?`Azord + Matador + URO • Advisory Board (URO specialty for URO team)`:`Azord + Clavodar + Mixif • بدون حصة محددة`}</small>
+     <small>{c.id===`ent-chest`?`Azord + Clavodar + Matador • ENT 30 لكل فريق`:c.id===`gastro`?`Azord + Clavodar + Matador • 35 طبيبا لكل فريق من جميع التخصصات`:c.id===`uro`?`URO + Matador • 25 لكل فريق`:c.id===`advisory`?`Azord + Clavodar + Matador + URO • Advisory Board (URO specialty for URO team)`:`Azord + Clavodar + Mixif • بدون حصة محددة`}</small>
      <div>{groups.filter(g=>g.id===c.id).map(g=>
       <button type="button" key={g.key} aria-pressed={selectedKey===g.key} className={selectedKey===g.key?"active":""} onClick={()=>{setActive(g.key);setSearch("");setOnlySelected(false);setStatusFilter(`all`);setAllSpecialties(false);setSpecialtyFilter(`all`)}}>
        {g.teamName}
@@ -54,7 +54,7 @@ export function Standalone({data,busy,onChoose,onInit,mode="standalone"}){
   </div>
   {current?<section className="surface standalone-selector">
    <div className="standalone-selected-title">
-    <div><h3>{current.title} — {current.teamName}</h3><p>{current.quota>0?`المستهدف ${current.quota} طبيبا لهذا الفريق بشكل مستقل`:`اختيار أطباء الأطفال لهذا الفريق بدون عدد مستهدف محدد`}</p></div>
+    <div><h3>{current.title} — {current.teamName}</h3><p>{current.quota>0?`المستهدف ${current.quota} طبيبا لهذا الفريق بشكل مستقل`:current.id===`advisory`?`اختيار أطباء الفريق ضمن Advisory Board بدون عدد مستهدف محدد`:`اختيار أطباء الأطفال لهذا الفريق بدون عدد مستهدف محدد`}</p></div>
     <strong className="standalone-quota">{count}{current.quota>0&&<small> / {quota?.limit??current.quota}</small>}</strong>
    </div>
    {current.quota>0&&<div className="standalone-meter"><div style={{width:`${Math.min(100,count/(quota?.limit||current.quota)*100)}%`}}/></div>}
