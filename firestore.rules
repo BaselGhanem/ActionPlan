@@ -382,9 +382,9 @@ service cloud.firestore {
   function standaloneCampaign(c,t) {
    let f=get(/databases/$(database)/documents/finance/2027).data;
    let name=f.teams.get(t,{}).get('name','');
-   return (c == 'ent-chest' && name.matches('(?i)(azord|matador)')) ||
-    (c == 'gastro' && name.matches('(?i)(azord|matador)')) ||
-    (c == 'advisory' && name.matches('(?i)(azord|matador|uro)')) ||
+   return (c == 'ent-chest' && name.matches('(?i)(azord|clavodar|matador)')) ||
+    (c == 'gastro' && name.matches('(?i)(azord|clavodar|matador)')) ||
+    (c == 'advisory' && name.matches('(?i)(azord|clavodar|matador|uro)')) ||
     (c == 'uro' && name.matches('(?i)(uro|matador)')) ||
      (c == 'pedia' && name.matches('(?i)(azord|clavodar|mixif)'));
   }
